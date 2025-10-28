@@ -1,0 +1,550 @@
+Tutorial Dettagliato: Guida al Progetto EventHub
+
+Questo tutorial fornisce una guida dettagliata alla configurazione e allo sviluppo del progetto EventHub, includendo istruzioni passo-passo, comandi da terminale e snippet di codice rilevanti.
+
+***
+
+### 1. Setup Iniziale del Progetto
+
+#### 1.1 Clonazione del Repository
+
+Per iniziare, clona il repository del progetto EventHub dalla sua sorgente. Apri il terminale e digita:
+
+```bash
+git clone <URL_DEL_REPOSITORY>
+cd EventHub
+```
+
+#### 1.2 Installazione delle Dipendenze
+
+Una volta nella directory del progetto, installa tutte le dipendenze necessarie. Assicurati di avere Node.js e npm (o yarn) installati sul tuo sistema.
+
+```bash
+npm install
+# oppure
+yarn install
+```
+
+#### 1.3 Configurazione del File `.env`
+
+Crea un file `.env` nella root del progetto. Questo file conterrà le variabili d'ambiente sensibili, come le credenziali del database e le chiavi segrete per i token JWT. Un esempio di configurazione potrebbe essere:
+
+```
+PORT=3000
+DATABASE_URL="postgresql://user:password@host:port/database"
+JWT_SECRET="supersecretjwtkey"
+EMAIL_USER="your_email@gmail.com"
+EMAIL_PASS="your_email_password"
+```
+
+***
+
+### 2. Setup del Database
+
+#### 2.1 Connessione al Database PostgreSQL
+
+Il progetto utilizza PostgreSQL. Assicurati che il tuo server PostgreSQL sia in esecuzione e che le credenziali nel file `.env` siano corrette. La connessione al database è gestita tramite `src/db/config.js`.
+
+#### 2.2 Schema del Database
+
+Lo schema del database è definito in `src/db/schema.sql`. Questo file contiene le definizioni delle tabelle e delle relazioni. Attualmente include la tabella `users` e la tabella `events`.
+
+```sql
+-- src/db/schema.sql
+
+-- Elimina gli indici esistenti
+DROP INDEX IF EXISTS idx_users_email;
+DROP INDEX IF EXISTS idx_users_reset_token;
+
+-- Elimina la tabella esistente
+DROP TABLE IF EXISTS users CASCADE;
+
+-- Crea la tabella users
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'user',
+    reset_password_token VARCHAR(255),
+    reset_password_expire TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Crea gli indici
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_reset_token ON users(reset_password_token);
+
+-- Elimina la tabella events esistente
+DROP TABLE IF EXISTS events CASCADE;
+
+-- Crea la tabella events
+CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    event_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    capacity INTEGER NOT NULL,
+    image_url TEXT,
+    address VARCHAR(255),
+    location VARCHAR(255),
+    category VARCHAR(100),
+    organizer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Elimina la tabella event_registrations esistente
+DROP TABLE IF EXISTS event_registrations CASCADE;
+
+-- Crea la tabella event_registrations
+CREATE TABLE event_registrations (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, event_id)
+);
+```
+
+#### 2.3 Inizializzazione del Database
+
+Per inizializzare il database con lo schema definito, puoi eseguire uno script o un comando che applichi `schema.sql`. Questo è spesso fatto tramite un comando npm script o manualmente con un client PostgreSQL.
+
+***
+
+### 3. Avvio del Server
+
+#### 3.1 Comando di Avvio
+
+Per avviare il server Node.js, usa il seguente comando nel terminale:
+
+```bash
+npm start
+```
+
+#### 3.2 Output Atteso
+
+Se il server si avvia correttamente, dovresti vedere un output simile a questo nel terminale:
+
+```
+Server running on port 3000
+Mail server is ready.
+Database connected and initialized.
+Admin user created/checked.
+```
+
+***
+
+### 4. Funzionalità di Autenticazione
+
+#### 4.1 Registrazione Utente
+
+Gli utenti possono registrarsi tramite un endpoint API. Il processo include la validazione dei dati, l'hashing della password e il salvataggio nel database.
+
+#### 4.2 Login Utente
+
+Dopo la registrazione, gli utenti possono effettuare il login per ottenere un JSON Web Token (JWT), che verrà utilizzato per autenticare le richieste successive.
+
+#### 4.3 Middleware di Autenticazione e Ruoli
+
+Il progetto include middleware per proteggere le rotte e gestire i permessi basati sui ruoli (`user`, `admin`).
+
+```javascript
+// src/middleware/auth.middleware.js
+
+const jwt = require('jsonwebtoken');
+const asyncHandler = require('express-async-handler');
+const db = require('../db/config');
+
+const protect = asyncHandler(async (req, res, next) => {
+  let token;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      // Get token from header
+      token = req.headers.authorization.split(' ')[1];
+      console.log('Token received in middleware:', token);
+      console.log('JWT_SECRET used for verification in middleware:', process.env.JWT_SECRET);
+
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // console.log('Decoded token:', decoded);
+
+      // Get user from the token
+      const result = await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [decoded.id]);
+      req.user = result.rows[0];
+      console.log('User from token:', req.user);
+      next();
+    } catch (error) {
+      console.error('Error in auth middleware:', error);
+      res.status(401);
+      throw new Error('Not authorized, token failed');
+    }
+  }
+  if (!token) {
+    res.status(401);
+    throw new Error('Not authorized, no token');
+  }
+});
+
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    // Se non sono specificati ruoli, qualsiasi utente autenticato può accedere
+    if (roles.length === 0) {
+      return next();
+    }
+
+    if (!roles.includes(req.user.role)) {
+      res.status(403);
+      throw new Error(`User role ${req.user.role} is not authorized to access this route`);
+    }
+    next();
+  };
+};
+
+module.exports = { protect, authorize };
+```
+
+```javascript
+// src/middleware/checkRole.js
+
+const db = require('../db/config');
+
+const checkRole = (roles) => {
+    return async (req, res, next) => {
+        try {
+            const userId = req.user?.id; // Use req.user.id from the protect middleware
+            if (!userId) {
+                return res.status(401).json({ message: 'Non autorizzato' });
+            }
+
+            const result = await db.query('SELECT role FROM users WHERE id = $1', [userId]);
+            if (result.rows.length === 0) {
+                return res.status(401).json({ message: 'Utente non trovato' });
+            }
+
+            const userRole = result.rows[0].role;
+            if (!roles.includes(userRole)) {
+                return res.status(403).json({ message: 'Accesso negato' });
+            }
+
+            next();
+        } catch (error) {
+            console.error('Errore nella verifica del ruolo:', error);
+            res.status(500).json({ message: 'Errore del server' });
+        }
+    };
+};
+
+module.exports = checkRole;
+```
+
+***
+
+### 5. Funzionalità di Reset Password
+
+#### 5.1 Richiesta di Reset Password
+
+Gli utenti possono richiedere il reset della password fornendo la propria email. Il sistema genererà un token di reset e invierà un'email con un link per il reset.
+
+#### 5.2 Invio Email
+
+L'invio delle email è gestito tramite Nodemailer, configurato con le credenziali Gmail specificate nel file `.env`.
+
+#### 5.3 Pagina di Reset Password
+
+Una pagina frontend (`reset-password.html`) permette agli utenti di inserire la nuova password utilizzando il token ricevuto via email.
+
+#### 5.4 Logica di Reset (Da Implementare)
+
+La logica per la verifica del token e l'aggiornamento della password nel database è parzialmente implementata e richiede completamento.
+
+***
+
+### 6. Funzionalità di Creazione Eventi
+
+#### 6.1 Rotte API per Eventi
+
+Le rotte API per la gestione degli eventi sono definite in `src/routes/event.routes.js`. Attualmente include una rotta POST per la creazione di nuovi eventi.
+
+```javascript
+// src/routes/event.routes.js
+
+const express = require('express');
+const router = express.Router();
+const eventController = require('../controllers/event.controller');
+const upload = require('../middleware/upload');
+const { authorize, protect } = require('../middleware/auth.middleware');
+
+// Rotte pubbliche
+router.get('/events', eventController.getAllEvents);
+router.get('/events/my-registrations', protect, authorize(), eventController.getMyRegisteredEvents);
+router.get('/events/search', eventController.searchEvents);
+router.get('/events/:id', eventController.getEventById);
+
+// Rotte protette (richiedono autenticazione)
+router.post('/events', protect, authorize(), upload.single('image'), eventController.createEvent);
+router.put('/events/:id', protect, authorize('admin'), upload.single('image'), eventController.updateEvent);
+router.delete('/events/:id', protect, authorize('admin'), eventController.deleteEvent);
+
+// Rotte per la registrazione agli eventi
+router.post('/events/register', protect, authorize(), eventController.registerForEvent);
+router.post('/events/unregister', protect, authorize(), eventController.unregisterFromEvent);
+
+module.exports = router;
+```
+
+#### 6.2 Controller per Eventi
+
+La logica per la creazione di eventi è gestita in `src/controllers/event.controller.js`. Questo controller si occupa di inserire i dettagli dell'evento nel database, inclusa la gestione dell'URL dell'immagine caricata.
+
+```javascript
+// src/controllers/event.controller.js
+
+const pool = require('../db/config');
+
+const createEvent = async (req, res) => {
+    const { title, description, event_date, capacity } = req.body;
+    const image_url = req.file ? `/uploads/${req.file.filename}` : null; // Get image path from multer
+
+    try {
+        const result = await pool.query(
+            'INSERT INTO events (title, description, event_date, capacity, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [title, description, event_date, capacity, image_url]
+        );
+        res.status(201).json({ message: 'Event created successfully', event: result.rows[0] });
+    } catch (error) {
+        console.error('Error creating event:', error);
+        res.status(500).json({ message: 'Error creating event' });
+    }
+};
+
+module.exports = { createEvent };
+```
+
+#### 6.3 Frontend per Creazione Eventi
+
+La pagina frontend per la creazione di eventi è `src/public/create-event.html`. Questa pagina include un modulo per inserire i dettagli dell'evento e un campo per l'upload dell'immagine.
+
+```html
+<!-- src/public/create-event.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Event</title>
+    <link rel="stylesheet" href="/css/create-event.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Create New Event</h1>
+        <form id="createEventForm">
+            <div class="form-group">
+                <label for="title">Event Title:</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="event_date">Date:</label>
+                <input type="datetime-local" id="event_date" name="event_date" required>
+            </div>
+            <div class="form-group">
+                <label for="capacity">Capacity:</label>
+                <input type="number" id="capacity" name="capacity" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="image">Event Image:</label>
+                <input type="file" id="image" name="image" accept="image/*">
+            </div>
+            <button type="submit">Create Event</button>
+        </form>
+        <p id="message" class="message"></p>
+    </div>
+    <script src="/js/create-event.js"></script>
+</body>
+</html>
+```
+
+Il CSS per la pagina di creazione eventi è in `src/public/css/create-event.css` e il JavaScript per la gestione del modulo è in `src/public/js/create-event.js`.
+
+```javascript
+// src/public/js/create-event.js (snippet rilevante)
+
+document.addEventListener('DOMContentLoaded', () => {
+    const createEventForm = document.getElementById('createEventForm');
+    const messageElement = document.getElementById('message');
+
+    createEventForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(createEventForm);
+
+        try {
+            const response = await fetch('/api/events', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                messageElement.textContent = data.message || 'Event created successfully!';
+                messageElement.className = 'message success';
+                createEventForm.reset();
+            } else {
+                messageElement.textContent = data.message || 'Failed to create event.';
+                messageElement.className = 'message error';
+            }
+        } catch (error) {
+            console.error('Error creating event:', error);
+            messageElement.textContent = 'An error occurred. Please try again.';
+            messageElement.className = 'message error';
+        }
+    });
+});
+```
+
+***
+
+### 7. Struttura del Codice
+
+Il progetto segue una struttura modulare:
+
+-   `src/app.js`: File principale dell'applicazione, configura Express e i middleware.
+-   `src/routes/`: Contiene i file delle rotte API (es. `auth.routes.js`, `event.routes.js`).
+-   `src/controllers/`: Contiene la logica di business per ciascuna rotta (es. `auth.controller.js`, `event.controller.js`).
+-   `src/db/`: Contiene la configurazione del database e gli script SQL.
+-   `src/middleware/`: Contiene i middleware personalizzati (es. `auth.middleware.js`, `checkRole.js`).
+-   `src/models/`: Contiene i modelli dei dati (es. `user.model.js`).
+-   `src/public/`: Contiene i file statici del frontend (HTML, CSS, JavaScript).
+    -   `src/public/uploads/`: Directory per le immagini caricate.
+
+```javascript
+// src/app.js (snippet rilevante)
+
+const express = require('express');
+const app = express();
+const authRoutes = require('./routes/auth.routes');
+const eventRoutes = require('./routes/event.routes');
+
+// ... existing code ...
+
+app.use('/api', authRoutes);
+app.use('/api', eventRoutes);
+
+// ... existing code ...
+```
+
+***
+
+### 8. Prossimi Passi Dettagliati
+
+#### 8.1 Completamento Logica Reset Password
+
+-   **Implementare la verifica del token di reset**: Aggiungere la logica per validare il `reset_password_token` e `reset_password_expire` quando un utente tenta di resettare la password.
+-   **Aggiornare la password**: Una volta che il token è valido, aggiornare la password dell'utente nel database con la nuova password fornita, assicurandosi di hashare la nuova password.
+-   **Invalidare il token**: Dopo un reset riuscito, invalidare il token di reset per prevenire riutilizzi.
+
+#### 8.2 Implementazione Creazione Eventi
+
+-   **Gestione Upload Immagini**: Implementare la logica per l'upload delle immagini degli eventi. Questo richiederà:
+    -   **Backend**: Configurare un middleware come `multer` per gestire i file caricati, salvare le immagini in una directory sul server e salvare il percorso dell'immagine nel database. (Completato)
+    -   **Frontend**: Modificare `create-event.js` per inviare l'immagine come `multipart/form-data` al backend. (Completato)
+-   **Validazione Input**: Aggiungere la validazione per tutti i campi dell'evento (titolo, descrizione, data, capacità, immagine).
+
+#### 8.3 Testing e Debugging
+
+-   **Test Unitari e di Integrazione**: Scrivere test per le nuove funzionalità di reset password e creazione eventi.
+-   **Test Manuali**: Eseguire test manuali per verificare che tutte le funzionalità lavorino come previsto.
+-   **Gestione Errori**: Migliorare la gestione degli errori e i messaggi di feedback per l'utente.
+
+#### 8.4 Miglioramenti UI/UX
+
+-   **Feedback Visivo**: Aggiungere feedback visivo per l'utente durante le operazioni (es. spinner di caricamento, messaggi di successo/errore più chiari).
+-   **Navigazione**: Integrare la pagina di creazione eventi nel flusso di navigazione dell'applicazione.
+
+***
+
+### 9. Debugging Iscrizione/Disiscrizione Eventi
+
+#### 9.1 Analisi Iniziale
+
+-   **Problema**: I pulsanti di iscrizione/disiscrizione non funzionano correttamente.
+-   **File Coinvolti**: `src/public/public-page.html`, `src/routes/event.routes.js`, `src/controllers/event.controller.js`, `src/db/schema.sql`.
+
+#### 9.2 Verifica Rotte API (`src/routes/event.routes.js`)
+
+-   **Rotte Esistenti**: Confermata l'esistenza delle rotte `/api/events/register` e `/api/events/unregister`.
+-   **Protezione**: Le rotte sono protette da `authenticateToken` e `checkRole`.
+-   **Mapping**: Mappano a `eventController.registerForEvent` e `eventController.unregisterFromEvent`.
+
+```javascript
+// src/routes/event.routes.js
+
+const express = require('express');
+const router = express.Router();
+const eventController = require('../controllers/event.controller');
+const upload = require('../middleware/upload');
+const { authorize, protect } = require('../middleware/auth.middleware');
+
+// Rotte pubbliche
+router.get('/events', eventController.getAllEvents);
+router.get('/events/my-registrations', protect, authorize(), eventController.getMyRegisteredEvents);
+router.get('/events/search', eventController.searchEvents);
+router.get('/events/:id', eventController.getEventById);
+
+// Rotte protette (richiedono autenticazione)
+router.post('/events', protect, authorize(), upload.single('image'), eventController.createEvent);
+router.put('/events/:id', protect, authorize('admin'), upload.single('image'), eventController.updateEvent);
+router.delete('/events/:id', protect, authorize('admin'), eventController.deleteEvent);
+
+// Rotte per la registrazione agli eventi
+router.post('/events/register', protect, authorize(), eventController.registerForEvent);
+router.post('/events/unregister', protect, authorize(), eventController.unregisterFromEvent);
+
+module.exports = router;
+```
+
+#### 9.3 Verifica Logica Controller (`src/controllers/event.controller.js`)
+
+-   **Funzioni Esaminate**: `registerForEvent` e `unregisterFromEvent`.
+-   **Logica**: La logica per controllare le registrazioni esistenti, la capacità dell'evento e l'aggiornamento delle tabelle `event_registrations` e `events` è stata trovata corretta.
+
+#### 9.4 Verifica Schema Database (`src/db/schema.sql`)
+
+-   **Tabella Esaminata**: `event_registrations`.
+-   **Struttura**: La definizione della tabella con `user_id` e `event_id` come chiavi esterne e una chiave primaria composita è stata confermata come corretta.
+
+#### 9.5 Analisi Log Server
+
+-   **Risultato**: I log del server non hanno mostrato errori relativi alle chiamate `/api/events/register` o `/api/events/unregister`.
+
+#### 9.6 Debugging Client-Side (`src/public/public-page.html`)
+
+-   **Sospetto**: Il problema è stato ricondotto a un potenziale errore client-side.
+-   **Funzioni Esaminate**: `handleRegistration` e i listener di eventi per i pulsanti `.register-btn` e `.unregister-btn`.
+-   **Modifiche Effettuate**:
+    -   Aggiunti `console.log` alla funzione `handleRegistration` per tracciare il comportamento.
+    -   Aggiunti `console.log` alla funzione `updateEventCard` per tracciare gli aggiornamenti della UI.
+    -   Aggiunti `console.log` al listener di eventi delegato per i pulsanti di registrazione/disiscrizione.
+
+#### 9.7 Risoluzione Alert Duplicati (`src/public/public-page.html`)
+
+-   **Problema**: Apparivano due alert per ogni azione di iscrizione/disiscrizione.
+-   **Causa**: Due listener di eventi gestivano la stessa azione.
+-   **Soluzione**:
+    -   Rimosso il listener di eventi diretto all'interno di `fetchAndRenderEvents`.
+    -   Modificato il listener di eventi delegato per chiamare direttamente `handleRegistration(event)`.
+    -   Rimossi tutti i `console.log` aggiunti precedentemente.
+
+#### 9.8 Debugging Registrazione Utente Specifico (`src/controllers/event.controller.js`)
+
+-   **Problema Segnalato**: L'iscrizione/disiscrizione influisce su tutti gli utenti, non solo su quello loggato.
+-   **Funzione Esaminata**: `getMyRegisteredEvents`.
+-   **Modifiche Effettuate**: Aggiunti `console.log` all'inizio della funzione `getMyRegisteredEvents` per stampare l'ID utente dal token e gli ID degli eventi registrati per quell'utente.

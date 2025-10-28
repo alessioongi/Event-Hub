@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang='it'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Crea Evento - EventHub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+        .nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav a {
+            color: #1a73e8;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .nav a:hover {
+            background-color: #f5f5f5;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .login-btn {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+        }
+        .login-btn:hover {
+            background-color: #1557b0;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+        }
+        .logout-btn:hover {
+            background-color: #bb2d3b;
+        }
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+        }
+        .user-role {
+            font-size: 14px;
+            color: #666;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group input[type="time"],
+        .form-group input[type="number"],
+        .form-group input[type="url"],
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group input[type="file"] {
+            padding: 5px;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        button[type="submit"] {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status-pending {
+            color: orange;
+            font-weight: bold;
+        }
+        .status-approved {
+            color: green;
+            font-weight: bold;
+        }
+        .status-rejected {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <div class='logo'>EventHub</div>
+            <div class='nav'>
+                <a href='/'>Home</a>
+                <a href='/public-page.html'>Pagina Pubblica</a>
+                <a href='/my-created-events' id='myCreatedEventsLink' style='display: none;'>I miei eventi creati</a>
+                <a href='/admin-page.html' id='adminLink' style='display: none;'>Area Admin</a>
+            </div>
+            <div class='auth-buttons'>
+                <div class='user-info'>
+                    <span>Benvenuto, <span id='userName'></span></span>
+                    <span class='user-role'>(
+                        <span id='userRole'></span>
+                    )</span>
+                </div>
+                <a href='/login.html' class='button login-btn' id='loginBtn'>Accedi</a>
+                <button class='button logout-btn' id='logoutBtn' style='display: none;' onclick='handleLogout()'>Logout</button>
+            </div>
+        </div>
+
+        <h1>Crea Nuovo Evento</h1>
+        <form id='createEventForm'>
+            <div class='form-group'>
+                <label for='title'>Titolo Evento:</label>
+                <input type='text' id='title' name='title' required>
+            </div>
+            <div class='form-group'>
+                <label for='description'>Descrizione:</label>
+                <textarea id='description' name='description' required></textarea>
+            </div>
+            <div class='form-group'>
+                <label for='eventDate'>Data Evento:</label>
+                <input type='date' id='eventDate' name='eventDate' required>
+            </div>
+            <div class='form-group'>
+                <label for='eventTime'>Ora Evento:</label>
+                <input type='time' id='eventTime' name='eventTime' required>
+            </div>
+            <div class='form-group'>
+                <label for='capacity'>Capacità:</label>
+                <input type='number' id='capacity' name='capacity' min='1' required>
+            </div>
+            <div class='form-group'>
+                <label for='image'>Documento Evento (solo PDF):</label>
+                <input type='file' id='image' name='image' accept='application/pdf'>
+            </div>
+            <div class='form-group'>
+                <label for='image_url'>O URL Immagine (da internet/drive):</label>
+                <input type='url' id='image_url' name='image_url'>
+            </div>
+            <div class='form-group'>
+                <label for='address'>Indirizzo:</label>
+                <input type='text' id='address' name='address' placeholder='Es: Via Roma 10' required>
+            </div>
+            <div class='form-group'>
+                <label for='location'>Località:</label>
+                <input type='text' id='location' name='location' placeholder='Es: Stadio San Siro' required>
+            </div>
+            <div class='form-group'>
+                <label for='category'>Categoria:</label>
+                <input type='text' id='category' name='category' placeholder='Es: Musica, Sport, Arte'>
+            </div>
+            <button type='submit'>Crea Evento</button>
+        </form>
+        <p id='message' class='message'></p>
+    </div>
+
+    <script>
+        // Gestione sessione e UI
+        let isAuthenticated = false;
+        let userRole = '';
+
+        function updateUI(userData) {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.querySelector('.user-info');
+            const adminLink = document.getElementById('adminLink');
+            const userName = document.getElementById('userName');
+            const userRoleSpan = document.getElementById('userRole');
+            const createEventLink = document.getElementById('createEventLink');
+            const myCreatedEventsLink = document.getElementById('myCreatedEventsLink');
+
+            if (isAuthenticated) {
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                userInfo.style.display = 'flex';
+                userName.textContent = userData.name || userData.email;
+                userRoleSpan.textContent = userData.role;
+                // createEventLink.style.display = 'block'; // Rimosso il link Crea Evento dalla sua stessa pagina
+                myCreatedEventsLink.style.display = 'block';
+
+                if (userData.role === 'admin') {
+                    adminLink.style.display = 'block';
+                }
+            } else {
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                userInfo.style.display = 'none';
+                // createEventLink.style.display = 'none'; // Rimosso il link Crea Evento dalla sua stessa pagina
+                myCreatedEventsLink.style.display = 'none';
+                adminLink.style.display = 'none';
+            }
+        }
+
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/check-session');
+                const data = await response.json();
+                isAuthenticated = data.isAuthenticated;
+
+                if (isAuthenticated) {
+                    const userResponse = await fetch('/api/user');
+                    const userData = await userResponse.json();
+                    userRole = userData.role;
+                    updateUI(userData);
+                } else {
+                    updateUI({});
+                }
+            } catch (error) {
+                console.error('Errore nel controllo della sessione:', error);
+                updateUI({});
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) {
+                    isAuthenticated = false;
+                    userRole = '';
+                    updateUI({});
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Errore durante il logout:', error);
+            }
+        }
+
+        checkSession();
+    </script>
+    <script src='/js/create-event.js'></script>
+</body>
+</html>

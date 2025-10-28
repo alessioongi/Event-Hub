@@ -1,0 +1,35 @@
+.event-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.event-card h3 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.event-card p {
+    color: #666;
+    line-height: 1.6;
+}
+
+.event-card strong {
+    font-weight: bold;
+}
+
+/* Stili per lo stato dell'evento */
+.status-pending {
+    color: #ffc107; /* Giallo */
+}
+
+.status-rejected {
+    color: #dc3545; /* Rosso */
+}
+
+.status-accepted {
+    color: #28a745; /* Verde */
+}

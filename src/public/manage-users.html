@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventHub - Gestione Utenti</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+        .nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav a {
+            color: #1a73e8;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .nav a:hover {
+            background-color: #f5f5f5;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .login-btn {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+        }
+        .login-btn:hover {
+            background-color: #1557b0;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+        }
+        .logout-btn:hover {
+            background-color: #bb2d3b;
+        }
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+        }
+        .user-role {
+            font-size: 14px;
+            color: #666;
+        }
+        .content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .content h1 {
+            color: #1a73e8;
+            margin-top: 0;
+        }
+        .content p {
+            color: #666;
+            line-height: 1.6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #bb2d3b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">EventHub</div>
+            <div class="nav">
+                <a href="/">Home</a>
+                <a href="/public-page.html">Pagina Pubblica</a>
+                <a href="/create-event.html" id="createEventLink">Crea Evento</a>
+                <a href="/my-created-events.html" id="myCreatedEventsLink">I miei eventi creati</a>
+                <a href="/admin-page.html" id="adminLink" style="display: none;">Area Admin</a>
+            </div>
+            <div class="auth-buttons">
+                <div class="user-info">
+                    <span>Benvenuto, <span id="userName"></span></span>
+                    <span class="user-role">(<span id="userRole"></span>)</span>
+                </div>
+                <a href="/login.html" class="button login-btn" id="loginBtn">Accedi</a>
+                <button class="button logout-btn" id="logoutBtn" style="display: none;" onclick="handleLogout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <h1>Gestione Utenti</h1>
+            <div id="userManagementContent">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Ruolo</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <!-- User rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="unauthorizedMessage" style="display: none;">
+                <p>Non hai i permessi necessari per accedere a questa pagina. Questa area è riservata agli amministratori.</p>
+                <a href="/" class="button login-btn">Torna alla Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isAuthenticated = false;
+        let userRole = '';
+
+        // Funzione per aggiornare l'interfaccia in base allo stato di autenticazione
+        function updateUI(userData) {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.querySelector('.user-info');
+            const adminLink = document.getElementById('adminLink');
+            const createEventLink = document.getElementById('createEventLink');
+            const myCreatedEventsLink = document.getElementById('myCreatedEventsLink');
+            const userName = document.getElementById('userName');
+            const userRoleSpan = document.getElementById('userRole');
+            const userManagementContent = document.getElementById('userManagementContent');
+            const unauthorizedMessage = document.getElementById('unauthorizedMessage');
+
+            if (isAuthenticated) {
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                userInfo.style.display = 'flex';
+                userName.textContent = userData.name || userData.email;
+                userRoleSpan.textContent = userData.role;
+
+                createEventLink.style.display = 'block';
+                myCreatedEventsLink.style.display = 'block';
+
+                if (userData.role === 'admin') {
+                    adminLink.style.display = 'block';
+                    userManagementContent.style.display = 'block';
+                    unauthorizedMessage.style.display = 'none';
+                    fetchUsers(); // Carica gli utenti se l'admin è autenticato
+                } else {
+                    adminLink.style.display = 'none';
+                    createEventLink.style.display = 'none';
+                    myCreatedEventsLink.style.display = 'none';
+                    userManagementContent.style.display = 'none';
+                    unauthorizedMessage.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                }
+            } else {
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                userInfo.style.display = 'none';
+                adminLink.style.display = 'none';
+                createEventLink.style.display = 'none';
+                myCreatedEventsLink.style.display = 'none';
+            }
+        }
+
+        // Funzione per verificare lo stato della sessione
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/check-session');
+                const data = await response.json();
+                
+                isAuthenticated = data.isAuthenticated;
+                if (isAuthenticated) {
+                    // Ottieni i dettagli dell'utente
+                    const userResponse = await fetch('/api/user');
+                    const userData = await userResponse.json();
+                    userRole = userData.role;
+                    updateUI(userData);
+                } else {
+                    updateUI({});
+                }
+            } catch (error) {
+                console.error('Errore nel controllo della sessione:', error);
+                updateUI({});
+            }
+        }
+
+        // Funzione per gestire il logout
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    isAuthenticated = false;
+                    userRole = '';
+                    updateUI({});
+                    window.location.href = '/';
+                } else {
+                    console.error('Errore durante il logout');
+                }
+            } catch (error) {
+                console.error('Errore durante il logout:', error);
+            }
+        }
+
+        // Funzione per recuperare e visualizzare gli utenti
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/api/users');
+                if (!response.ok) {
+                    throw new Error('Errore nel recupero degli utenti');
+                }
+                const users = await response.json();
+                const userTableBody = document.getElementById('userTableBody');
+                userTableBody.innerHTML = ''; // Pulisce la tabella prima di aggiungere nuove righe
+
+                users.forEach(user => {
+                    const row = userTableBody.insertRow();
+                    row.insertCell().textContent = user.id;
+                    row.insertCell().textContent = user.name;
+                    row.insertCell().textContent = user.email;
+                    row.insertCell().textContent = user.role;
+                    const actionCell = row.insertCell();
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Elimina';
+                    deleteButton.className = 'delete-btn';
+                    deleteButton.onclick = () => deleteUser(user.id);
+                    actionCell.appendChild(deleteButton);
+                });
+            } catch (error) {
+                console.error('Errore durante il recupero degli utenti:', error);
+                alert('Impossibile caricare gli utenti: ' + error.message);
+            }
+        }
+
+        // Funzione per eliminare un utente
+        async function deleteUser(userId) {
+            if (!confirm('Sei sicuro di voler eliminare questo utente?')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Errore durante l'eliminazione dell'utente");
+                }
+
+                alert("Utente eliminato con successo!");
+                fetchUsers(); // Ricarica la lista degli utenti
+            } catch (error) {
+                console.error("Errore durante l'eliminazione dell'utente:", error);
+                alert("Impossibile eliminare l'utente: " + error.message);
+            }
+        }
+
+        // Controlla la sessione all'avvio
+        checkSession();
+    </script>
+</body>
+</html>

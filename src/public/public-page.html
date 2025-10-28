@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventHub - Area Pubblica</title>
+    <link rel="stylesheet" href="/css/public-page.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+        .nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav a {
+            color: #1a73e8;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .nav a:hover {
+            background-color: #f5f5f5;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .login-btn {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+        }
+        .login-btn:hover {
+            background-color: #1557b0;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+        }
+        .logout-btn:hover {
+            background-color: #bb2d3b;
+        }
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+        }
+        .user-role {
+            font-size: 14px;
+            color: #666;
+        }
+        .content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .content h1 {
+            color: #1a73e8;
+            margin-top: 0;
+        }
+        .content p {
+            color: #666;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">EventHub</div>
+            <div class="nav">
+                <a href="/">Home</a>
+                <a href="/public-page.html" id="publicPageLink">Pagina Pubblica</a>
+                <a href="/create-event.html" id="createEventLink" style="display: none;">Crea Evento</a>
+                <a href="/my-created-events" id="myCreatedEventsLink" style="display: none;">I miei eventi creati</a>
+                <a href="/admin-page.html" id="adminLink" style="display: none;">Area Admin</a>
+            </div>
+            <div class="auth-buttons">
+                <div class="user-info">
+                    <span>Benvenuto, <span id="user-name"></span></span>
+                    <span class="user-role">(<span id="userRole"></span>)</span>
+                </div>
+                <a href="/login.html" class="button login-btn" id="loginBtn">Accedi</a>
+                <button class="button logout-btn" id="logoutBtn" style="display: none;" onclick="handleLogout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <h1>Area Pubblica</h1>
+            <p>Benvenuto nell'area pubblica di EventHub. Qui troverai contenuti e funzionalità accessibili a tutti gli utenti registrati.</p>
+            <div id="publicContent" style="display: none;">
+                <h2>Contenuto Riservato</h2>
+                <p>Questo contenuto è visibile solo agli utenti autenticati. Grazie per essere parte della nostra community!</p>
+
+                <div class="events-section">
+                    <h2>Eventi Disponibili</h2>
+                    <div class="search-bar">
+                        <input type="date" id="eventSearchDate" placeholder="Cerca per data...">
+    <input type="text" id="eventSearchLocation" placeholder="Cerca per luogo...">
+    <input type="text" id="eventSearchCategory" placeholder="Cerca per categoria...">
+    <button id="searchButton">Cerca</button>
+                    </div>
+                    <div id="eventsList" class="events-grid"></div>
+                </div>
+
+            </div>
+            <div id="loginMessage" style="display: none;">
+                <p>Per accedere a questa pagina, è necessario effettuare il login.</p>
+                <a href="/login.html" class="button login-btn">Vai al Login</a>
+            </div>
+        </div>
+    </div>
+    <!-- TEST STRING: VERIFICA CACHE BROWSER -->
+
+    <script>
+        let isLoggedIn = false;
+        let userRole = '';
+        let registeredEvents = []; // Array per memorizzare gli ID degli eventi a cui l'utente è iscritto
+
+        // Funzione per recuperare gli eventi a cui l'utente è iscritto
+        async function fetchMyRegisteredEvents() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/events/my-registrations', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const events = await response.json();
+                    registeredEvents = events.map(event => event.id);
+                } else if (response.status !== 404) { // Ignora 404 se non ci sono registrazioni
+                    console.error('Errore nel recupero degli eventi registrati:', response.status, response.statusText);
+                    registeredEvents = [];
+                }
+            } catch (error) {
+                console.error('Errore nel recupero degli eventi registrati:', error);
+                registeredEvents = [];
+            }
+        }
+
+        // Funzione per aggiornare l'interfaccia in base allo stato di autenticazione
+        async function updateUI(userData) {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.querySelector('.user-info');
+            const userName = document.getElementById('user-name');
+            const userRoleSpan = document.getElementById('userRole');
+            const adminLink = document.getElementById('adminLink');
+            const createEventLink = document.getElementById('createEventLink');
+            const myCreatedEventsLink = document.getElementById('myCreatedEventsLink');
+            const publicContent = document.getElementById('publicContent');
+            const loginMessage = document.getElementById('loginMessage');
+            const publicPageLink = document.getElementById('publicPageLink');
+
+            if (isLoggedIn) {
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                userInfo.style.display = 'flex';
+                userName.textContent = userData.name || userData.email;
+                userRoleSpan.textContent = userData.role;
+
+                publicPageLink.style.display = 'none';
+
+                if (userData.role === 'admin') {
+                    adminLink.style.display = 'block';
+                } else {
+                    adminLink.style.display = 'none';
+                }
+                createEventLink.style.display = 'block';
+                myCreatedEventsLink.style.display = 'block';
+                publicContent.style.display = 'block'; // Show public content
+                loginMessage.style.display = 'none'; // Hide login message
+                await fetchMyRegisteredEvents();
+                fetchAndRenderEvents('', '');
+            } else {
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                userInfo.style.display = 'none';
+                adminLink.style.display = 'none';
+                createEventLink.style.display = 'none';
+                myCreatedEventsLink.style.display = 'none';
+                publicPageLink.style.display = 'block';
+                publicContent.style.display = 'none'; // Hide public content
+                loginMessage.style.display = 'block'; // Show login message
+                // window.location.href = '/login.html'; // Reindirizza alla pagina di login se non autenticato
+            }
+        }
+
+        // Funzione per verificare lo stato della sessione
+        async function checkSession() {
+            try {
+                const token = localStorage.getItem('token');
+                console.log('checkSession: Token recuperato:', token);
+                const response = await fetch('/api/check-session', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                console.log('checkSession: Risposta da /api/check-session:', response);
+                const data = await response.json();
+                console.log('checkSession: Dati da /api/check-session:', data);
+                  
+                 isLoggedIn = data.isAuthenticated;
+                 if (isLoggedIn) {
+                      // Ottieni i dettagli dell'utente
+                     const userResponse = await fetch('/api/user', {
+                         headers: {
+                             'Authorization': `Bearer ${token}`
+                         }
+                     });
+                     const userData = await userResponse.json();
+                    userRole = data.role; // Usa il ruolo dalla risposta di check-session
+                    await updateUI(userData); // Passa l'oggetto user corretto
+                 } else {
+                     updateUI({});
+                 }
+             } catch (error) {
+                  console.error('Errore nel controllo della sessione:', error);
+                  updateUI({});
+              }
+          }
+
+         // Funzione per gestire il logout
+         async function handleLogout() {
+             try {
+                 const response = await fetch('/api/logout', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'Authorization': `Bearer ${localStorage.getItem('token')}`
+                     }
+                 });
+
+                 if (response.ok) {
+                     isLoggedIn = false;
+                     userRole = '';
+                     registeredEvents = []; // Pulisci gli eventi registrati al logout
+                     updateUI({});
+                 } else {
+                     // console.error('Errore durante il logout');
+                 }
+             } catch (error) {
+                 // console.error('Errore durante il logout:', error);
+             }
+         }
+
+        // Funzione per recuperare e renderizzare gli eventi
+        async function fetchAndRenderEvents(searchDate = '', searchLocation = '', searchCategory = '') {
+            const eventsListDiv = document.getElementById('eventsList');
+            eventsListDiv.innerHTML = ''; // Pulisci la lista esistente
+
+            let url = '/api/events';
+            const params = new URLSearchParams();
+            if (searchDate) {
+                params.append('date', searchDate);
+            }
+            if (searchLocation) {
+                params.append('location', searchLocation);
+            }
+            if (searchCategory) {
+                params.append('category', searchCategory);
+            }
+            if (params.toString()) {
+                url = `/api/events/search?${params.toString()}`;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                console.log('Fetching events from URL:', url);
+                const response = await fetch(url, { headers });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Errore durante il recupero degli eventi:', errorData.message || response.statusText);
+                    eventsListDiv.innerHTML = `<p>Errore nel caricamento degli eventi: ${errorData.message || response.statusText}</p>`;
+                    return;
+                }
+
+                const events = await response.json();
+
+                if (!Array.isArray(events) || events.length === 0) {
+                    eventsListDiv.innerHTML = '<p>Nessun evento trovato.</p>';
+                    return;
+                }
+
+                events.forEach(event => {
+                    const isRegistered = registeredEvents.includes(event.id); // Verifica se l'utente è iscritto
+                    const buttonText = isRegistered ? 'Disiscriviti' : 'Iscriviti';
+                    const buttonClass = isRegistered ? 'unregister-btn btn-danger' : 'register-btn btn-primary';
+
+                    const eventCard = document.createElement('div');
+                    eventCard.className = 'event-card card mb-3';
+                    eventCard.dataset.eventId = event.id;
+                    eventCard.innerHTML = `
+                        <div class="card-body">
+                            <h5 class="card-title">${event.title}</h5>
+                            <p class="card-text"><strong>Data:</strong> ${new Date(event.event_date).toLocaleDateString()}</p>
+                            <p class="card-text"><strong>Ora:</strong> ${event.time ? event.time.substring(0, 5) : ''}</p>
+                            <p class="card-text"><strong>Luogo:</strong> ${event.location}</p>
+                            <p class="card-text"><strong>Categoria:</strong> ${event.category || 'N/A'}</p>
+                            <p class="card-text"><strong>Posti disponibili:</strong> <span class="available-seats">${event.capacity}</span></p>
+                            ${event.image_url ? `<img src="${event.image_url}" class="card-img-top" alt="${event.title}">` : ''}
+                            <button class="${buttonClass}" data-event-id="${event.id}" ${isLoggedIn ? '' : 'disabled'}>
+                                ${buttonText}
+                            </button>
+                        </div>
+                    `;
+                    eventsListDiv.appendChild(eventCard);
+                });
+
+                 // Aggiungi listener per i pulsanti di iscrizione/disiscrizione
+                 // document.querySelectorAll('.register-btn, .unregister-btn').forEach(button => {
+                 //     button.addEventListener('click', handleRegistration);
+                 // });
+
+             } catch (error) {
+                 console.error('Errore nel recupero degli eventi:', error);
+                 eventsListDiv.innerHTML = '<p>Errore nel caricamento degli eventi.</p>';
+             }
+         }
+
+         // Funzione per gestire la ricerca
+         document.getElementById('searchButton').addEventListener('click', () => {
+             const searchDate = document.getElementById('eventSearchDate').value;
+             const searchLocation = document.getElementById('eventSearchLocation').value;
+             const searchCategory = document.getElementById('eventSearchCategory').value;
+             fetchAndRenderEvents(searchDate, searchLocation, searchCategory);
+         });
+
+         // Funzione per gestire l'iscrizione/disiscrizione
+         async function handleRegistration(event) {
+            // console.log('handleRegistration called');
+             const eventId = event.target.dataset.eventId;
+             const isRegistered = event.target.classList.contains('unregister-btn');
+             const method = 'POST';
+             const url = isRegistered ? '/api/events/unregister' : '/api/events/register';
+             const successMessage = isRegistered ? `Disiscrizione dall\'evento avvenuta con successo` : `Registrazione all\'evento avvenuta con successo`;
+             const errorMessage = isRegistered ? `Errore durante la disiscrizione.` : `Errore durante l\'iscrizione.`;
+
+             try {
+                 const token = localStorage.getItem('token');
+                 if (!token) {
+                     alert('Devi effettuare il login per iscriverti o disiscriverti dagli eventi.');
+                     window.location.href = '/login.html';
+                     return;
+                 }
+                // console.log(`Attempting to ${isRegistered ? 'unregister from' : 'register for'} event ${eventId}`);
+                 const response = await fetch(url, {
+                     method: method,
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'Authorization': `Bearer ${token}`
+                     },
+                     body: JSON.stringify({ event_id: eventId })
+                 });
+
+                 const result = await response.json();
+                 if (response.ok) {
+                    // console.log('API call successful:', result);
+                     alert(successMessage);
+                     await fetchMyRegisteredEvents(); // Aggiorna gli eventi registrati
+                     fetchAndRenderEvents('', ''); // Ricarica gli eventi per aggiornare lo stato di iscrizione
+                 } else {
+                    // console.error('API call failed:', result);
+                     alert(result.message || errorMessage);
+                 }
+             } catch (error) {
+                 console.error('Errore durante l\'operazione di registrazione/disiscrizione:', error);
+                 alert('Si è verificato un errore di rete.');
+             }
+         }
+
+         document.addEventListener('DOMContentLoaded', checkSession);
+  // Funzione per aggiornare lo stato del pulsante e la capacità
+             async function updateEventCard(eventCard, eventId) {
+                // console.log('updateEventCard called for event:', eventId);
+                 const registerButton = eventCard.querySelector(`.register-btn[data-event-id="${eventId}"], .unregister-btn[data-event-id="${eventId}"]`);
+                  const capacityElement = eventCard.querySelector('.card-text strong:nth-child(2)'); // Assuming capacity is the second strong tag
+  
+                  try {
+                     const response = await fetch(`/api/events/${eventId}`);
+                     const event = await response.json();
+
+                     const userRegistrationsResponse = await fetch('/api/events/my-registrations', {
+                         headers: {
+                             'Authorization': `Bearer ${localStorage.getItem('token')}`
+                         }
+                     });
+                     const userRegistrations = await userRegistrationsResponse.json();
+                     const isRegistered = Array.isArray(userRegistrations) && userRegistrations.some(reg => reg.id === eventId);
+
+                     if (registerButton) {
+                         if (isRegistered) {
+                             registerButton.textContent = 'Disiscriviti';
+                             registerButton.classList.remove('btn-primary');
+                             registerButton.classList.add('btn-danger');
+                         } else {
+                             registerButton.textContent = 'Iscriviti';
+                             registerButton.classList.remove('btn-danger');
+                             registerButton.classList.add('btn-primary');
+                         }
+                     }
+                     if (capacityElement) {
+                         capacityElement.textContent = `Capacità: ${event.capacity !== null ? event.capacity : 'N/A'}`;
+                     }
+
+                 } catch (error) {
+                     console.error('Error updating event card:', error);
+                 }
+             }
+
+             // Gestione click sui pulsanti di registrazione/disiscrizione
+             document.addEventListener('click', async (event) => {
+                 if (event.target.classList.contains('register-btn') || event.target.classList.contains('unregister-btn')) {
+                    // console.log('Delegated event listener triggered');
+                    handleRegistration(event); // Call the main handler
+                 }
+             });
+
+
+        </script>
+    </body>
+</html>
