@@ -8,26 +8,27 @@
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0; /* Changed from 20px */
             background-color: #f0f2f5;
         }
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+            max-width: 100%;
+            margin: 0;
+            padding: 0; /* Changed from 20px */
         }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
-            padding-bottom: 20px;
+            padding: 10px 20px; /* Changed from padding-bottom and margin */
             border-bottom: 1px solid #e0e0e0;
+            background-color: #007bff;
         }
         .logo {
             font-size: 24px;
             font-weight: bold;
-            color: #1a73e8;
+            color: white; /* Changed to white */
         }
         .nav {
             display: flex;
@@ -35,7 +36,7 @@
             align-items: center;
         }
         .nav a {
-            color: #1a73e8;
+            color: white; /* Changed to white */
             text-decoration: none;
             padding: 8px 16px;
             border-radius: 4px;
@@ -43,6 +44,7 @@
         }
         .nav a:hover {
             background-color: #f5f5f5;
+            color: #007bff; /* Changed to blue on hover */
         }
         .auth-buttons {
             display: flex;
@@ -56,32 +58,34 @@
             font-weight: 500;
             text-decoration: none;
             transition: background-color 0.2s;
+            background-color: #007bff; /* Changed to blue */
+            color: white; /* Changed to white */
         }
         .login-btn {
-            background-color: #1a73e8;
-            color: white;
+            background-color: white; /* Changed to white */
+            color: #007bff; /* Changed to blue */
             border: none;
         }
         .login-btn:hover {
-            background-color: #1557b0;
+            background-color: #e0e0e0;
         }
         .logout-btn {
-            background-color: #dc3545;
-            color: white;
+            background-color: red; /* Changed to red */
+            color: white; /* Changed to white */
             border: none;
         }
         .logout-btn:hover {
-            background-color: #bb2d3b;
+            background-color: #cc0000;
         }
         .user-info {
             display: none;
             align-items: center;
             gap: 10px;
-            color: #333;
+            color: white; /* Changed to white */
         }
         .user-role {
             font-size: 14px;
-            color: #666;
+            color: white; /* Changed to white */
         }
         .content {
             background: white;
@@ -120,7 +124,7 @@
             cursor: pointer;
         }
         .delete-btn:hover {
-            background-color: #bb2d3b;
+            background-color: #1557b0; /* Darker blue on hover */
         }
     </style>
 </head>
