@@ -24,6 +24,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h2>${event.title}</h2>
                     <p>${event.description}</p>
                     <p><strong>Data:</strong> ${new Date(event.event_date).toLocaleDateString()}</p>
+                    <p><strong>Ora:</strong> ${event.event_time}</p>
+                    <p><strong>Capacità:</strong> ${event.capacity}</p>
+                    <p><strong>Indirizzo:</strong> ${event.address}</p>
+                    <p><strong>Località:</strong> ${event.location}</p>
+                    <p><strong>Categoria:</strong> ${event.category}</p>
+                    ${event.image_url ? `<p><strong>Immagine:</strong> <img src="${event.image_url}" alt="Event Image" style="max-width: 200px;"></p>` : ''}
+                    ${event.pdf_url ? `<p><strong>Documento PDF:</strong> <a href="${event.pdf_url}" target="_blank">Visualizza PDF</a></p>` : ''}
                     <p><strong>Stato:</strong> <span class="status-${event.status}">${event.status}</span></p>
                     <button class="approve-btn">Approva</button>
                     <button class="reject-btn">Rifiuta</button>
