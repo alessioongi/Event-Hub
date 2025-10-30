@@ -14,7 +14,7 @@ router.get('/events/:id', eventController.getEventById);
 
 // Rotte protette (richiedono autenticazione)
 router.post('/events', protect, authorize(), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf_file', maxCount: 1 }]), eventController.createEvent);
-router.put('/events/:id', protect, authorize('admin'), upload.single('image'), eventController.updateEvent);
+router.put('/events/:id', protect, authorize(), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf_file', maxCount: 1 }]), eventController.updateEvent);
 router.delete('/events/:id', protect, eventController.deleteEvent);
 
 // Rotte per l'approvazione/rifiuto degli eventi (solo admin)

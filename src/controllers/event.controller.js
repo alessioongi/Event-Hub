@@ -307,21 +307,74 @@ const getEventById = async (req, res) => {
 
 const updateEvent = async (req, res) => {
     const { id } = req.params;
-    const { title, description, event_date, capacity } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : req.body.image_url_existing; // Mantieni l'immagine esistente se non viene caricata una nuova
+    const { title, description, event_date, event_time, capacity, image_url_existing, pdf_url_existing, address, location, category } = req.body;
+    let finalImageUrl = image_url_existing;
+    let finalPdfUrl = pdf_url_existing;
 
     try {
+        // Verifica che l'utente sia l'organizzatore dell'evento
+        const eventResult = await pool.query('SELECT organizer_id FROM events WHERE id = $1', [id]);
+        if (eventResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Evento non trovato' });
+        }
+        const event = eventResult.rows[0];
+        if (event.organizer_id !== req.user.id) {
+            return res.status(403).json({ message: 'Non autorizzato a modificare questo evento' });
+        }
+
+        // Gestisci upload immagine nuova
+        if (req.files && req.files.image_file && req.files.image_file[0]) {
+            finalImageUrl = '/uploads/' + req.files.image_file[0].filename;
+        }
+
+        // Gestisci upload PDF nuovo
+        if (req.files && req.files.pdf_file && req.files.pdf_file[0]) {
+            finalPdfUrl = '/uploads/' + req.files.pdf_file[0].filename;
+        }
+
+        // Validazioni URL immagine e PDF
+        if (finalImageUrl && finalImageUrl.length > 2000) {
+            return res.status(400).json({ message: 'Image URL is too long. Maximum 2000 characters allowed.' });
+        }
+        if (finalPdfUrl && finalPdfUrl.length > 2000) {
+            return res.status(400).json({ message: 'PDF URL is too long. Maximum 2000 characters allowed.' });
+        }
+        if (!finalImageUrl) {
+            return res.status(400).json({ message: 'Image URL is required' });
+        }
+        // Rimosso: if (!finalPdfUrl) { return res.status(400).json({ message: 'PDF file is required' }); }
+
+        // Aggiorna evento con stato pending
         const result = await pool.query(
-            'UPDATE events SET title = $1, description = $2, event_date = $3, capacity = $4, image_url = $5 WHERE id = $6 RETURNING *',
-            [title, description, event_date, capacity, image_url, id]
+            'UPDATE events SET title = $1, description = $2, event_date = $3, event_time = $4, capacity = $5, image_url = $6, pdf_url = $7, address = $8, location = $9, category = $10, status = $11 WHERE id = $12 RETURNING *',
+            [title, description, event_date, event_time, capacity, finalImageUrl, finalPdfUrl, address, location, category, 'pending', id]
         );
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Evento non trovato' });
         }
-        res.status(200).json({ message: 'Evento aggiornato con successo', event: result.rows[0] });
+        const updatedEvent = result.rows[0];
+
+        // Invia notifica agli admin per riapprovazione
+        const admins = await pool.query('SELECT email FROM users WHERE role = $1', ['admin']);
+        const adminEmails = admins.rows.map(admin => admin.email);
+        if (adminEmails.length > 0) {
+            const adminSubject = 'Evento Modificato - Richiede Riapprovazione';
+            const adminHtmlContent = `
+                <h1>Evento Modificato</h1>
+                <p>L'evento <strong>${updatedEvent.title}</strong> è stato modificato ed è in attesa della tua riapprovazione.</p>
+                <p>Descrizione: ${updatedEvent.description}</p>
+                <p>Data: ${updatedEvent.event_date} ${updatedEvent.event_time}</p>
+                <p>Organizzatore: ${req.user.name || req.user.email}</p>
+                <p>Per approvare o rifiutare l'evento, visita la pagina di amministrazione.</p>
+                <a href="http://localhost:3000/admin-page.html">Vai alla pagina Admin</a>
+            `;
+            await sendEmail(adminEmails.join(','), adminSubject, adminHtmlContent);
+        }
+
+        res.status(200).json({ message: 'Evento aggiornato con successo - in attesa di riapprovazione', event: updatedEvent });
     } catch (error) {
         console.error('Error updating event:', error);
-        res.status(500).json({ message: 'Error updating event' });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 

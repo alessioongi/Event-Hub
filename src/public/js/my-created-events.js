@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <p>${event.description}</p>
                     <p>Data: ${new Date(event.event_date).toLocaleDateString()} Ora: ${event.event_time}</p>
                     <p>Stato: <strong class="status-${event.status}">${event.status}</strong></p>
+                    <button class="button logout-btn" onclick="handleEditEvent('${event.id}')">Modifica</button>
                     <button class="button logout-btn" onclick="handleDeleteEvent('${event.id}')">Elimina</button>
                 </div>
             `).join('');
@@ -36,6 +37,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     loadMyCreatedEvents();
+
+    window.handleEditEvent = (eventId) => {
+        window.location.href = `/edit-event.html?id=${eventId}`;
+    };
 
     window.handleDeleteEvent = async (eventId) => {
         if (!confirm('Sei sicuro di voler eliminare questo evento?')) {
