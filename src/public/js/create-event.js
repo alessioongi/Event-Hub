@@ -17,13 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('location', document.getElementById('location').value);
         formData.append('category', document.getElementById('category').value);
 
-        const imageFile = document.getElementById('image').files[0];
         const imageUrl = document.getElementById('image_url').value;
+        const pdfFile = document.getElementById('pdf_file').files[0];
 
-        if (imageFile) {
-            formData.append('image', imageFile);
-        } else if (imageUrl) {
+        if (imageUrl) {
             formData.append('image_url', imageUrl);
+        }
+
+        if (pdfFile) {
+            formData.append('pdf_file', pdfFile);
         }
 
         try {

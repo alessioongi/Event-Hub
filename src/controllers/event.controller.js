@@ -3,33 +3,44 @@ const pool = require('../db/config');
 const createEvent = async (req, res) => {
     try {
         const { title, description, event_date, event_time, capacity, image_url, address, location, category } = req.body;
-         let imageUrl = image_url;
+        let finalImageUrl = image_url;
+        let finalPdfUrl = null; // Initialize to null
 
-         if (req.file) {
-             imageUrl = `/uploads/${req.file.filename}`;
-         }
+        if (req.files && req.files.pdf_file && req.files.pdf_file[0]) {
+            finalPdfUrl = '/uploads/' + req.files.pdf_file[0].filename;
+        }
 
-         if (!imageUrl) {
-             return res.status(400).json({ message: 'Image is required' });
-         }
+        if (!finalImageUrl) {
+            return res.status(400).json({ message: 'Image URL is required' });
+        }
 
-         // Validazione della lunghezza dell'URL dell'immagine
-         if (imageUrl && imageUrl.length > 2000) { // Ho scelto 2000 come limite arbitrario, puoi modificarlo
-             return res.status(400).json({ message: 'Image URL is too long. Maximum 2000 characters allowed.' });
-         }
+        if (!finalPdfUrl) {
+            return res.status(400).json({ message: 'PDF file is required' });
+        }
 
-         console.log('Image URL being saved:', imageUrl); // Aggiunto per debug
+        // Validazione della lunghezza dell'URL dell'immagine
+        if (finalImageUrl && finalImageUrl.length > 2000) {
+            return res.status(400).json({ message: 'Image URL is too long. Maximum 2000 characters allowed.' });
+        }
 
-         const newEvent = await pool.query(
-             'INSERT INTO events (title, description, event_date, event_time, capacity, image_url, organizer_id, address, location, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING * ',
-             [title, description, event_date, event_time, capacity, imageUrl, req.user.id, address, location, category]
-         );
-         res.status(201).json({ message: 'Event created successfully', event: newEvent.rows[0] });
-     } catch (error) {
-         console.error('Error creating event:', error);
-         res.status(500).json({ message: 'Server error' });
-     }
- };
+        // Validazione della lunghezza dell'URL del PDF
+        if (finalPdfUrl && finalPdfUrl.length > 2000) {
+            return res.status(400).json({ message: 'PDF URL is too long. Maximum 2000 characters allowed.' });
+        }
+
+        console.log('Image URL being saved:', finalImageUrl); // Aggiunto per debug
+        console.log('PDF URL being saved:', finalPdfUrl); // Aggiunto per debug
+
+        const newEvent = await pool.query(
+            'INSERT INTO events (title, description, event_date, event_time, capacity, image_url, pdf_url, organizer_id, address, location, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING * ',
+            [title, description, event_date, event_time, capacity, finalImageUrl, finalPdfUrl, req.user.id, address, location, category]
+        );
+        res.status(201).json({ message: 'Event created successfully', event: newEvent.rows[0] });
+    } catch (error) {
+        console.error('Error creating event:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
 const getPendingEvents = async (req, res) => {
     try {
@@ -84,7 +95,6 @@ const getAllEvents = async (req, res) => {
             'SELECT e.*, u.name as organizer_name FROM events e JOIN users u ON e.organizer_id = u.id WHERE e.status = $1 ORDER BY e.event_date DESC',
             ['approved']
         );
-        console.log('Fetched events with image URLs:', result.rows.map(event => ({ id: event.id, title: event.title, image_url: event.image_url, time: event.time }))); // Aggiunto per debug
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('Error fetching events:', error);

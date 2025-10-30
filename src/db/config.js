@@ -3,11 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 
+console.log('PG_REJECT_UNAUTHORIZED value at pool creation:', process.env.PG_REJECT_UNAUTHORIZED);
 const pool = new Pool({
-    connectionString: 'postgres://avnadmin:AVNS_LBLUquFtRp1pdNO5vU-@pg-325a2e73-bid-it-2024-2026.e.aivencloud.com:20048/event_hub',
-    ssl: {
-        rejectUnauthorized: false
-    }
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: process.env.PG_REJECT_UNAUTHORIZED === 'false' ? false : true
+  }
 });
 
 module.exports = {

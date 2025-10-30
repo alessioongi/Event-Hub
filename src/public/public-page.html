@@ -334,10 +334,11 @@
                         <div class="card-body">
                             <h5 class="card-title">${event.title}</h5>
                             <p class="card-text"><strong>Data:</strong> ${new Date(event.event_date).toLocaleDateString()}</p>
-                            <p class="card-text"><strong>Ora:</strong> ${event.time ? event.time.substring(0, 5) : ''}</p>
+                            <p class="card-text"><strong>Ora:</strong> ${event.event_time ? event.event_time.substring(0, 5) : ''}</p>
                             <p class="card-text"><strong>Luogo:</strong> ${event.location}</p>
                             <p class="card-text"><strong>Categoria:</strong> ${event.category || 'N/A'}</p>
                             <p class="card-text"><strong>Posti disponibili:</strong> <span class="available-seats">${event.capacity}</span></p>
+                            ${event.pdf_url ? `<p class="card-text"><strong>Documento:</strong> <a href="${event.pdf_url}" target="_blank">Visualizza PDF</a></p>` : ''}
                             ${event.image_url ? `<img src="${event.image_url}" class="card-img-top" alt="${event.title}">` : ''}
                             <button class="${buttonClass}" data-event-id="${event.id}" ${isLoggedIn ? '' : 'disabled'}>
                                 ${buttonText}

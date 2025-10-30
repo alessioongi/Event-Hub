@@ -32,6 +32,7 @@ CREATE TABLE events (
     event_date TIMESTAMP WITH TIME ZONE NOT NULL,
     capacity INTEGER NOT NULL,
     image_url TEXT,
+    pdf_url TEXT,
     address VARCHAR(255),
     location VARCHAR(255),
     category VARCHAR(100),

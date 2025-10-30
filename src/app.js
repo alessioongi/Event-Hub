@@ -26,7 +26,7 @@ const eventRoutes = require('./routes/event.routes');
 const { protect } = require('./middleware/auth.middleware');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Middleware per il parsing del body delle richieste
 app.use(express.json());

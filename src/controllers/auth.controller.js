@@ -29,7 +29,7 @@ transporter.verify(function (error, success) {
 const generateToken = (id) => {
   // Generate JWT
   const token = jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '1h',
+    expiresIn: process.env.JWT_EXPIRE || '1h',
   });
   // console.log('JWT_SECRET used for signing:', process.env.JWT_SECRET);
   // console.log('Generated Token:', token);
@@ -78,6 +78,7 @@ exports.register = async (req, res, next) => {
       }
     });
   } catch (error) {
+    console.error('Errore durante la registrazione:', error);
     next(error);
   }
 };
@@ -160,7 +161,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     // Genera token di reset
     const resetToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: '1h'
+      expiresIn: process.env.JWT_EXPIRE || '1h'
     });
     console.log('Token generato:', resetToken);
 

@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class='card'>
                     <h2>${event.title}</h2>
                     <p>${event.description}</p>
-                    <p>Data: ${new Date(event.event_date).toLocaleString()}</p>
+                    <p>Data: ${new Date(event.event_date).toLocaleDateString()} Ora: ${event.event_time}</p>
                     <p>Stato: <strong class="status-${event.status}">${event.status}</strong></p>
                     <button class="button logout-btn" onclick="handleDeleteEvent('${event.id}')">Elimina</button>
                 </div>
