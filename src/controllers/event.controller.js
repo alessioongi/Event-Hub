@@ -1,4 +1,5 @@
 const pool = require('../db/config');
+const { sendEmail } = require('../utils/emailService');
 
 const createEvent = async (req, res) => {
     try {
@@ -35,6 +36,25 @@ const createEvent = async (req, res) => {
             'INSERT INTO events (title, description, event_date, event_time, capacity, image_url, pdf_url, organizer_id, address, location, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING * ',
             [title, description, event_date, event_time, capacity, finalImageUrl, finalPdfUrl, req.user.id, address, location, category]
         );
+
+        // Invia notifica agli admin per il nuovo evento in attesa di approvazione
+        const admins = await pool.query('SELECT email FROM users WHERE role = $1', ['admin']);
+        const adminEmails = admins.rows.map(admin => admin.email);
+
+        if (adminEmails.length > 0) {
+            const adminSubject = 'Nuovo Evento in Attesa di Approvazione';
+            const adminHtmlContent = `
+                <h1>Nuovo Evento Creato</h1>
+                <p>Un nuovo evento, <strong>${title}</strong>, è stato creato ed è in attesa della tua approvazione.</p>
+                <p>Descrizione: ${description}</p>
+                <p>Data: ${event_date} ${event_time}</p>
+                <p>Organizzatore: ${req.user.name || req.user.email}</p>
+                <p>Per approvare o rifiutare l'evento, visita la pagina di amministrazione.</p>
+                <a href="http://localhost:3000/admin-page.html">Vai alla pagina Admin</a>
+            `;
+            await sendEmail(adminEmails.join(','), adminSubject, adminHtmlContent);
+        }
+
         res.status(201).json({ message: 'Event created successfully', event: newEvent.rows[0] });
     } catch (error) {
         console.error('Error creating event:', error);
@@ -65,7 +85,21 @@ const approveEvent = async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Evento non trovato' });
         }
-        res.status(200).json({ message: 'Evento approvato con successo', event: result.rows[0] });
+
+        const approvedEvent = result.rows[0];
+        const organizer = await pool.query('SELECT email FROM users WHERE id = $1', [approvedEvent.organizer_id]);
+        const organizerEmail = organizer.rows[0].email;
+
+        const subject = 'Il tuo evento è stato approvato!';
+        const htmlContent = `
+            <h1>Evento Approvato</h1>
+            <p>Congratulazioni! Il tuo evento, <strong>${approvedEvent.title}</strong>, è stato approvato.</p>
+            <p>Ora è visibile al pubblico.</p>
+            <a href="http://localhost:3000/event-details.html?id=${approvedEvent.id}">Visualizza Evento</a>
+        `;
+        await sendEmail(organizerEmail, subject, htmlContent);
+
+        res.status(200).json({ message: 'Evento approvato con successo', event: approvedEvent });
     } catch (error) {
         console.error('Error approving event:', error);
         res.status(500).json({ message: 'Error approving event' });
@@ -82,7 +116,20 @@ const rejectEvent = async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Evento non trovato' });
         }
-        res.status(200).json({ message: 'Evento rifiutato con successo', event: result.rows[0] });
+
+        const rejectedEvent = result.rows[0];
+        const organizer = await pool.query('SELECT email FROM users WHERE id = $1', [rejectedEvent.organizer_id]);
+        const organizerEmail = organizer.rows[0].email;
+
+        const subject = 'Il tuo evento è stato rifiutato';
+        const htmlContent = `
+            <h1>Evento Rifiutato</h1>
+            <p>Siamo spiacenti, il tuo evento, <strong>${rejectedEvent.title}</strong>, è stato rifiutato.</p>
+            <p>Per maggiori informazioni, contatta l'amministrazione.</p>
+        `;
+        await sendEmail(organizerEmail, subject, htmlContent);
+
+        res.status(200).json({ message: 'Evento rifiutato con successo', event: rejectedEvent });
     } catch (error) {
         console.error('Error rejecting event:', error);
         res.status(500).json({ message: 'Error rejecting event' });

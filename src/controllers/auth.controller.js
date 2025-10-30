@@ -1,29 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const db = require('../db/config');
-const nodemailer = require('nodemailer');
-const debug = require('debug')('eventhub:email');
 const bcrypt = require('bcryptjs');
-
-// Configurazione del trasportatore email
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD
-  },
-  debug: true,
-  logger: true
-});
-
-// Test di verifica del trasportatore
-transporter.verify(function (error, success) {
-    if (error) {
-        console.error('Errore nella configurazione del trasportatore di posta:', error);
-    } else {
-        // console.log('Trasportatore verificato con successo');
-    }
-});
+const { sendEmail } = require('../utils/emailService');
 
 // Genera il token JWT
 const generateToken = (id) => {
@@ -176,30 +155,29 @@ exports.forgotPassword = async (req, res, next) => {
     const resetUrl = `http://localhost:3000/reset-password.html?token=${resetToken}`;
     console.log('URL di reset generato:', resetUrl);
 
-    // Configurazione email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Reset Password - EventHub',
-      html: `
+    // Contenuto email
+    const emailContent = `
         <h1>Richiesta di Reset Password</h1>
         <p>Hai richiesto il reset della password. Clicca sul link seguente per procedere:</p>
         <a href="${resetUrl}">Reset Password</a>
         <p>Il link scadrà tra 1 ora.</p>
         <p>Se non hai richiesto il reset della password, ignora questa email.</p>
-      `
-    };
-    console.log('Configurazione email:', mailOptions);
+      `;
 
     try {
       // Invia email
       console.log('Tentativo di invio email...');
-      await transporter.sendMail(mailOptions);
-      console.log('Email inviata con successo');
+      const emailResult = await sendEmail(email, 'Reset Password - EventHub', emailContent);
 
-      res.json({
-        message: 'Email di reset password inviata con successo'
-      });
+      if (emailResult.success) {
+        console.log('Email inviata con successo');
+        res.json({
+          message: 'Email di reset password inviata con successo'
+        });
+      } else {
+        console.error('Errore nell\'invio dell\'email:', emailResult.error);
+        return res.status(500).json({ message: 'Errore nell\'invio dell\'email di reset password' });
+      }
     } catch (emailError) {
       console.error('Errore dettagliato nell\'invio dell\'email:', emailError);
       throw emailError;
