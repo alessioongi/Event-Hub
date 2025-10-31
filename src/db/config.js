@@ -1,14 +1,22 @@
 const { Pool } = require('pg');
+const { parse } = require('pg-connection-string');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 
-console.log('PG_REJECT_UNAUTHORIZED value at pool creation:', process.env.PG_REJECT_UNAUTHORIZED);
+const connectionString = process.env.DATABASE_URL;
+const parsedConfig = parse(connectionString);
+
+// Rimuovi sslmode dalla configurazione analizzata per evitare sovrascritture
+if (parsedConfig.sslmode) {
+  delete parsedConfig.sslmode;
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: process.env.PG_REJECT_UNAUTHORIZED === 'false' ? false : true
-  }
+    ...parsedConfig,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 module.exports = {
