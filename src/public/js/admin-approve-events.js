@@ -7,6 +7,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             const events = await response.json();
+            
+            // Ensure events is an array
+            if (!Array.isArray(events)) {
+                console.error('Received data is not an array:', events);
+                events = []; // Set to empty array to prevent forEach error
+            }
+
             const pendingEventsContainer = document.getElementById('pendingEvents');
             pendingEventsContainer.innerHTML = ''; // Clear previous events
 

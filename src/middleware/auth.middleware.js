@@ -18,19 +18,19 @@ const protect = asyncHandler(async (req, res, next) => {
       req.user = result.rows[0];
       if (!req.user) {
         console.error('User not found for decoded token ID.');
-        res.redirect('/login.html');
-        return res.end();
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
       }
       next();
     } catch (error) {
       console.error('Error in auth middleware (token verification/user lookup):', error);
-      res.redirect('/login.html');
-      return res.end();
+      res.status(401).json({ message: 'Not authorized, token failed' });
+      return;
     }
   }
   if (!token) {
-    res.redirect('/login.html');
-    return res.end();
+    res.status(401).json({ message: 'Not authorized, no token' });
+    return;
   }
 });
 

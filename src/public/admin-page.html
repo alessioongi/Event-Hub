@@ -104,11 +104,25 @@
         }
         .admin-controls {
             margin-top: 20px;
-            display: none;
+            display: flex; /* Use flexbox for horizontal alignment */
+            flex-wrap: wrap; /* Allow buttons to wrap to the next line */
+            gap: 10px; /* Space between buttons */
         }
-        .admin-controls button {
-            margin-right: 10px;
-            margin-bottom: 10px;
+        .admin-controls .button {
+            flex: 1 1 auto; /* Allow buttons to grow and shrink, but maintain minimum size */
+            padding: 10px; /* Adjust padding */
+            border-radius: 3px; /* Adjust border-radius */
+            background-color: #007bff; /* Blue background */
+            color: white; /* White text */
+            border: none; /* No border */
+            text-align: center; /* Center text */
+            text-decoration: none; /* Remove underline from links */
+            font-weight: 500; /* Match font weight */
+            transition: background-color 0.2s; /* Smooth transition on hover */
+        }
+
+        .admin-controls .button:hover {
+            background-color: #0056b3; /* Darker blue on hover */
         }
     </style>
 </head>
@@ -138,10 +152,10 @@
             <div id="adminContent" style="display: none;">
                 <p>Benvenuto nell'area amministratore di EventHub. Qui puoi gestire gli utenti e le impostazioni del sistema.</p>
                 <div class="admin-controls">
-                    <a href="/manage-users.html" class="button login-btn">Gestione Utenti</a>
-                     <a href="/admin-approve-events.html" class="button login-btn">Gestisci Proposte Eventi</a>
-                     <button class="button login-btn" onclick="systemSettings()">Impostazioni Sistema</button>
-                    <a href="/register-admin.html" class="button login-btn">Registra Nuovo Amministratore</a>
+                    <a href="/manage-users.html" class="button">Gestione Utenti</a>
+                     <a href="/admin-approve-events.html" class="button">Gestisci Proposte Eventi</a>
+                     <button class="button" onclick="systemSettings()">Impostazioni Sistema</button>
+                    <a href="/register-admin.html" class="button">Registra Nuovo Amministratore</a>
                 </div>
             </div>
             <div id="unauthorizedMessage" style="display: none;">
@@ -184,10 +198,8 @@
                 // Mostra i controlli admin solo se l'utente è un amministratore
                 if (userData.role === 'admin') {
                     document.getElementById('adminContent').style.display = 'block';
-                    document.querySelector('.admin-controls').style.display = 'block';
                 } else {
                     document.getElementById('adminContent').style.display = 'none';
-                    document.querySelector('.admin-controls').style.display = 'none';
                 }
             } else {
                 loginBtn.style.display = 'block';

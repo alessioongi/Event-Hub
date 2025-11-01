@@ -15,10 +15,6 @@ const createEvent = async (req, res) => {
             return res.status(400).json({ message: 'Image URL is required' });
         }
 
-        if (!finalPdfUrl) {
-            return res.status(400).json({ message: 'PDF file is required' });
-        }
-
         // Validazione della lunghezza dell'URL dell'immagine
         if (finalImageUrl && finalImageUrl.length > 2000) {
             return res.status(400).json({ message: 'Image URL is too long. Maximum 2000 characters allowed.' });
@@ -342,7 +338,7 @@ const updateEvent = async (req, res) => {
         if (!finalImageUrl) {
             return res.status(400).json({ message: 'Image URL is required' });
         }
-        // Rimosso: if (!finalPdfUrl) { return res.status(400).json({ message: 'PDF file is required' }); }
+
 
         // Aggiorna evento con stato pending
         const result = await pool.query(
