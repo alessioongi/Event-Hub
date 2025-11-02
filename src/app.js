@@ -80,6 +80,9 @@ app.get('/', (req, res) => {
 });
 
 // Servire i file statici dalla directory 'public'
+app.use('/api/auth', authRoutes);
+app.use('/api', eventRoutes);
+
 app.use(express.static('src/public'));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
@@ -98,7 +101,7 @@ app.post('/api/register', async (req, res) => {
     try {
         const { name, email, password, role = 'user' } = req.body;
 
-        // Verifica se l'utente esiste già
+        // Verifica se l\'utente esiste già
         const userExists = await pool.query(
             'SELECT * FROM users WHERE email = $1',
             [email]
@@ -159,7 +162,7 @@ app.get('/api/check-session', (req, res) => {
     }
 });
 
-// Endpoint per ottenere i dati dell'utente
+// Endpoint per ottenere i dati dell\'utente
 app.get('/api/user', isAuthenticated, async (req, res) => {
     try {
         const result = await pool.query(
@@ -178,7 +181,7 @@ app.get('/api/user', isAuthenticated, async (req, res) => {
     }
 });
 
-// Endpoint per verificare se l'utente è admin
+// Endpoint per verificare se l\'utente è admin
 app.get('/api/check-admin', isAuthenticated, isAdmin, (req, res) => {
     res.json({ isAdmin: true });
 });
@@ -246,7 +249,7 @@ app.post('/api/reset-password', async (req, res) => {
         // Hash della nuova password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Aggiorna la password dell'utente
+        // Aggiorna la password dell\'utente
         await pool.query(
             'UPDATE users SET password = $1 WHERE id = $2',
             [hashedPassword, userId]
@@ -261,9 +264,6 @@ app.post('/api/reset-password', async (req, res) => {
         res.status(500).json({ message: 'Errore interno del server' });
     }
 });
-
-app.use('/api/auth', authRoutes);
-app.use('/api', eventRoutes);
 
 // Middleware per la gestione degli errori
 app.use((err, req, res, next) => {
