@@ -31,6 +31,12 @@ const port = process.env.PORT || 3000;
 // Middleware per il parsing del body delle richieste
 app.use(express.json());
 
+// Middleware per il logging delle richieste
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    next();
+});
+
 // Configurazione della sessione
 app.use(session({
     secret: 'il_tuo_segreto_super_sicuro',

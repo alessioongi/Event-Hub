@@ -17,6 +17,12 @@ async function runSchema() {
         await pool.query(updateSql);
         console.log('Schema del database aggiornato con successo.');
 
+        console.log('Esecuzione dello script create_chat_messages_table.sql...');
+        const chatMessagesSqlPath = path.join(__dirname, 'create_chat_messages_table.sql');
+        const chatMessagesSql = fs.readFileSync(chatMessagesSqlPath, 'utf8');
+        await pool.query(chatMessagesSql);
+        console.log('Tabella chat_messages creata con successo.');
+
         // Verifica se esiste già un utente admin
         const adminCheck = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@test.com']);
         if (adminCheck.rows.length === 0) {

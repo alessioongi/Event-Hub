@@ -17,6 +17,7 @@ router.post('/events', protect, authorize(), upload.fields([{ name: 'image', max
 router.get('/events/:id', eventController.getEventById);
 router.put('/events/:id/approve', protect, authorize('admin'), eventController.approveEvent);
 router.put('/events/:id/reject', protect, authorize('admin'), eventController.rejectEvent);
+router.delete('/events/:id', protect, authorize(), eventController.deleteEvent);
 
 // Rotte per la registrazione agli eventi
 router.post('/events/register', protect, authorize(), eventController.registerForEvent);

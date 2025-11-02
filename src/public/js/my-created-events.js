@@ -43,26 +43,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.handleDeleteEvent = async (eventId) => {
+        console.log('Tentativo di eliminare l\'evento con ID:', eventId);
         if (!confirm('Sei sicuro di voler eliminare questo evento?')) {
+            console.log('Eliminazione annullata dall\'utente.');
             return;
         }
 
         try {
             const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('Token non trovato. L\'utente non è autenticato.');
+                alert('Devi essere loggato per eliminare un evento.');
+                return;
+            }
+            console.log('Token trovato, invio richiesta DELETE per l\'evento:', eventId);
             const response = await fetch(`/api/events/${eventId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (response.ok) {
+                console.log('Evento eliminato con successo:', eventId);
                 alert('Evento eliminato con successo!');
-                loadMyCreatedEvents(); // Ricarica gli eventi dopo l'eliminazione
+                loadMyCreatedEvents(); // Ricarica gli eventi dopo l\'eliminazione
             } else {
                 const errorData = await response.json();
+                console.error('Errore durante l\'eliminazione dell\'evento:', errorData);
                 alert(`Errore durante l\'eliminazione dell\'evento: ${errorData.message}`);
             }
         } catch (error) {
-            console.error("Errore durante l\'eliminazione dell\'evento:", error);
+            console.error("Errore durante l\'eliminazione dell\'evento (catch block):", error);
             alert("Si è verificato un errore durante l\'eliminazione dell\'evento.");
         }
     };

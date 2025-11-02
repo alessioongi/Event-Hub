@@ -385,6 +385,7 @@
                             <button class="${buttonClass}" data-event-id="${event.id}" ${isLoggedIn ? '' : 'disabled'}>
                                 ${buttonText}
                             </button>
+                            <button class="button" onclick="handleChatEvent('${event.id}')">Chat</button>
                         </div>
                     `;
                     eventsListDiv.appendChild(eventCard);
@@ -499,7 +500,10 @@
                  }
              });
 
+             window.handleChatEvent = (eventId) => {
+                 window.location.href = `/chat.html?eventId=${eventId}`;
+             };
 
-        </script>
+         </script>
     </body>
 </html>
