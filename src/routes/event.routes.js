@@ -11,6 +11,9 @@ router.get('/events/my-created', protect, eventController.getMyCreatedEvents);
 router.get('/events/search', eventController.searchEvents);
 router.get('/events/pending', protect, authorize('admin'), eventController.getPendingEvents);
 
+// Rotta per la creazione di eventi
+router.post('/events', protect, authorize(), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), eventController.createEvent);
+
 router.get('/events/:id', eventController.getEventById);
 router.put('/events/:id/approve', protect, authorize('admin'), eventController.approveEvent);
 router.put('/events/:id/reject', protect, authorize('admin'), eventController.rejectEvent);
