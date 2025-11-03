@@ -3,12 +3,13 @@ const db = require('./config');
 const queries = {
     // Inserisce un nuovo utente
     createUser: async (name, email, password) => {
+        const newUserId = await queries.findLowestAvailableUserId();
         const query = `
-            INSERT INTO users (name, email, password)
-            VALUES ($1, $2, $3)
+            INSERT INTO users (id, name, email, password)
+            VALUES ($1, $2, $3, $4)
             RETURNING id, name, email, created_at
         `;
-        const values = [name, email, password];
+        const values = [newUserId, name, email, password];
         try {
             const result = await db.query(query, values);
             return result.rows[0];
@@ -99,12 +100,57 @@ const queries = {
 
     // Elimina i messaggi della chat per ID evento
     deleteChatMessagesByEventId: async (eventId) => {
-        const query = 'DELETE FROM chat_messages WHERE event_id = $1';
+        console.log(`Attempting to delete chat messages for event ID: ${eventId}`);
         try {
-            await db.query(query, [eventId]);
-        } catch (err) {
-            console.error('Errore nell\'eliminazione dei messaggi della chat:', err);
-            throw err;
+            const result = await db.query('DELETE FROM chat_messages WHERE event_id = $1', [eventId]);
+            console.log(`Successfully deleted chat messages for event ID: ${eventId}. Rows affected: ${result.rowCount}`);
+            return result;
+        } catch (error) {
+            console.error(`Error deleting chat messages for event ID: ${eventId}:`, error);
+            throw error;
+        }
+    },
+
+    findLowestAvailableEventId: async () => {
+        try {
+            const result = await db.query(`
+                SELECT s.i AS lowest_id
+                FROM generate_series(1, (SELECT MAX(id) + 1 FROM events)) s(i)
+                WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = s.i)
+                ORDER BY s.i
+                LIMIT 1;
+            `);
+            if (result.rows.length > 0) {
+                return result.rows[0].lowest_id;
+            } else {
+                // If no gaps, return MAX(id) + 1 or 1 if table is empty
+                const maxIdResult = await db.query('SELECT MAX(id) FROM events');
+                return (maxIdResult.rows[0].max || 0) + 1;
+            }
+        } catch (error) {
+            console.error('Error finding lowest available event ID:', error);
+            throw error;
+        }
+    },
+
+    findLowestAvailableUserId: async () => {
+        try {
+            const result = await db.query(`
+                SELECT s.i AS lowest_id
+                FROM generate_series(1, (SELECT MAX(id) + 1 FROM users)) s(i)
+                WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = s.i)
+                ORDER BY s.i
+                LIMIT 1;
+            `);
+            if (result.rows.length > 0) {
+                return result.rows[0].lowest_id;
+            } else {
+                const maxIdResult = await db.query('SELECT MAX(id) FROM users');
+                return (maxIdResult.rows[0].max || 0) + 1;
+            }
+        } catch (error) {
+            console.error('Error finding lowest available user ID:', error);
+            throw error;
         }
     }
 };

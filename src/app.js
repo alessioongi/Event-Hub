@@ -172,10 +172,13 @@ app.post('/api/register', async (req, res) => {
         // Hash della password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Ottieni il prossimo ID utente disponibile
+        const newUserId = await queries.findLowestAvailableUserId();
+
         // Inserimento nuovo utente
         const result = await pool.query(
-            'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
-            [name, email, hashedPassword, role]
+            'INSERT INTO users (id, name, email, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role',
+            [newUserId, name, email, hashedPassword, role]
         );
 
         // Imposta la sessione

@@ -1,7 +1,7 @@
 const pool = require('../db/config');
 const { sendEmail } = require('../utils/emailService');
 const queries = require('../db/queries');
-const { getChatMessagesByEventId } = queries;
+const { getChatMessagesByEventId, findLowestAvailableEventId } = queries;
 const asyncHandler = require('express-async-handler');
 
 const createEvent = asyncHandler(async (req, res) => {
@@ -30,9 +30,11 @@ const createEvent = asyncHandler(async (req, res) => {
     console.log('Image URL being saved:', finalImageUrl); // Aggiunto per debug
     console.log('PDF URL being saved:', finalPdfUrl); // Aggiunto per debug
 
+    const newEventId = await findLowestAvailableEventId();
+
     const newEvent = await pool.query(
-        'INSERT INTO events (title, description, event_date, event_time, capacity, image_url, pdf_url, organizer_id, address, location, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING * ',
-        [title, description, event_date, event_time, capacity, finalImageUrl, finalPdfUrl, req.user.id, address, location, category]
+        'INSERT INTO events (id, title, description, event_date, event_time, capacity, image_url, pdf_url, organizer_id, address, location, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING * ',
+        [newEventId, title, description, event_date, event_time, capacity, finalImageUrl, finalPdfUrl, req.user.id, address, location, category]
     );
 
     // Invia notifica agli admin per il nuovo evento in attesa di approvazione

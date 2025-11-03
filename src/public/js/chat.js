@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadMessages(id) {
         try {
             const token = localStorage.getItem('token'); // Recupera il token
+            messagesDiv.innerHTML = ''; // Pulisci i messaggi prima di qualsiasi richiesta
             const response = await fetch(`/api/chat/messages/${id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}` // Aggiungi il token all'intestazione
@@ -103,7 +104,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             if (response.ok) {
                 const messages = await response.json();
-                messagesDiv.innerHTML = ''; // Pulisci i messaggi placeholder
                 messages.forEach(msg => {
                     displayMessage(msg.user_name, msg.message_text);
                 });
