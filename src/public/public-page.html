@@ -370,10 +370,10 @@
                     const buttonClass = isRegistered ? 'unregister-btn btn-danger' : 'register-btn btn-primary';
 
                     const eventCard = document.createElement('div');
-                    eventCard.className = 'event-card card mb-3';
+                    eventCard.className = 'event-card';
                     eventCard.dataset.eventId = event.id;
                     eventCard.innerHTML = `
-                        <div class="card-body">
+                        <div class="event-card-content">
                             <h5 class="card-title">${event.title}</h5>
                             <p class="card-text"><strong>Data:</strong> ${new Date(event.event_date).toLocaleDateString()}</p>
                             <p class="card-text"><strong>Ora:</strong> ${event.event_time ? event.event_time.substring(0, 5) : ''}</p>
@@ -381,7 +381,9 @@
                             <p class="card-text"><strong>Categoria:</strong> ${event.category || 'N/A'}</p>
                             <p class="card-text"><strong>Posti disponibili:</strong> <span class="available-seats">${event.capacity}</span></p>
                             ${event.pdf_url ? `<p class="card-text"><strong>Documento:</strong> <a href="${event.pdf_url}" target="_blank">Visualizza PDF</a></p>` : ''}
-                            ${event.image_url ? `<img src="${event.image_url}" class="card-img-top" alt="${event.title}">` : ''}
+                        </div>
+                        ${event.image_url ? `<img src="${event.image_url}" alt="${event.title}">` : ''}
+                        <div class="event-card-actions">
                             <button class="${buttonClass}" data-event-id="${event.id}" ${isLoggedIn ? '' : 'disabled'}>
                                 ${buttonText}
                             </button>
