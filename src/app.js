@@ -3,7 +3,7 @@ require('dotenv').config();
 const dotenv = require('dotenv');
 const envConfig = dotenv.config();
 const { pool } = require('./db/config');
-const { insertChatMessage } = require('./db/queries');
+const { insertChatMessage, getUsernameById } = require('./db/queries');
 
 console.log('Value of pool after import:', pool);
 
@@ -69,8 +69,17 @@ io.on('connection', (socket) => {
 
     socket.on('chatMessage', async ({ eventId, userId, message }) => {
         try {
-            const newMessage = await insertChatMessage(eventId, userId, message);
-            io.to(eventId).emit('message', newMessage);
+            const username = await getUsernameById(userId);
+            if (!username) {
+                console.error('Errore: Nome utente non trovato per userId:', userId);
+                return;
+            }
+            const newMessage = await insertChatMessage(eventId, userId, username, message);
+            const clientMessage = {
+                ...newMessage,
+                userName: newMessage.username // Mappa 'username' dal DB a 'userName' per il client
+            };
+            io.to(eventId).emit('message', clientMessage);
         } catch (error) {
             console.error('Errore durante il salvataggio del messaggio di chat:', error);
         }
