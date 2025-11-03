@@ -3,6 +3,7 @@ require('dotenv').config();
 const dotenv = require('dotenv');
 const envConfig = dotenv.config();
 const { pool } = require('./db/config');
+const { insertChatMessage } = require('./db/queries');
 
 console.log('Value of pool after import:', pool);
 
@@ -21,11 +22,20 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const http = require('http');
+const { Server } = require('socket.io');
 const authRoutes = require('./routes/auth.routes');
 const eventRoutes = require('./routes/event.routes');
 const { protect } = require('./middleware/auth.middleware');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Consenti tutte le origini per lo sviluppo
+        methods: ["GET", "POST"]
+    }
+});
 const port = process.env.PORT || 3000;
 
 // Middleware per il parsing del body delle richieste
@@ -39,7 +49,7 @@ app.use((req, res, next) => {
 
 // Configurazione della sessione
 app.use(session({
-    secret: 'il_tuo_segreto_super_sicuro',
+    secret: process.env.SESSION_SECRET || 'il_tuo_segreto_super_sicuro',
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -48,6 +58,33 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000 // 24 ore
     }
 }));
+
+io.on('connection', (socket) => {
+    console.log('Nuova connessione Socket.IO');
+
+    socket.on('joinEvent', (eventId) => {
+        socket.join(eventId);
+        console.log(`Utente ${socket.id} si è unito all'evento ${eventId}`);
+    });
+
+    socket.on('chatMessage', async ({ eventId, userId, message }) => {
+        try {
+            const newMessage = await insertChatMessage(eventId, userId, message);
+            io.to(eventId).emit('message', newMessage);
+        } catch (error) {
+            console.error('Errore durante il salvataggio del messaggio di chat:', error);
+        }
+    });
+
+    socket.on('leaveEvent', (eventId) => {
+        socket.leave(eventId);
+        console.log(`Utente ${socket.id} ha lasciato l'evento ${eventId}`);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Utente disconnesso da Socket.IO');
+    });
+});
 
 // Middleware per verificare l'autenticazione
 const isAuthenticated = (req, res, next) => {
@@ -281,6 +318,6 @@ app.use((err, req, res, next) => {
 });
 
 // Avvio del server
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`Server in esecuzione sulla porta ${port}`);
 });

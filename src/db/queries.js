@@ -37,6 +37,38 @@ const queries = {
         } catch (err) {
             throw err;
         }
+    },
+    // Inserisce un nuovo messaggio di chat
+    insertChatMessage: async (eventId, userId, message) => {
+        const query = `
+            INSERT INTO chat_messages (event_id, user_id, message)
+            VALUES ($1, $2, $3)
+            RETURNING *
+        `;
+        const values = [eventId, userId, message];
+        try {
+            const result = await db.query(query, values);
+            return result.rows[0];
+        } catch (err) {
+            throw err;
+        }
+    },
+
+    // Recupera i messaggi della chat per ID evento
+    getChatMessagesByEventId: async (eventId) => {
+        const query = `
+            SELECT cm.*, u.name as user_name
+            FROM chat_messages cm
+            JOIN users u ON cm.user_id = u.id
+            WHERE cm.event_id = $1
+            ORDER BY cm.timestamp ASC
+        `;
+        try {
+            const result = await db.query(query, [eventId]);
+            return result.rows;
+        } catch (err) {
+            throw err;
+        }
     }
 };
 

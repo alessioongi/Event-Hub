@@ -1,64 +1,62 @@
 const pool = require('../db/config');
 const { sendEmail } = require('../utils/emailService');
+const queries = require('../db/queries');
+const { getChatMessagesByEventId } = queries;
+const asyncHandler = require('express-async-handler');
 
-const createEvent = async (req, res) => {
-    try {
-        const { title, description, event_date, event_time, capacity, image_url, address, location, category } = req.body;
-        let finalImageUrl = image_url;
-        let finalPdfUrl = null; // Initialize to null
+const createEvent = asyncHandler(async (req, res) => {
+    const { title, description, event_date, event_time, capacity, image_url, address, location, category } = req.body;
+    let finalImageUrl = image_url;
+    let finalPdfUrl = null; // Initialize to null
 
-        if (req.files && req.files.pdf_file && req.files.pdf_file[0]) {
-            finalPdfUrl = '/uploads/' + req.files.pdf_file[0].filename;
-        }
-
-        if (!finalImageUrl) {
-            return res.status(400).json({ message: 'Image URL is required' });
-        }
-
-        // Validazione della lunghezza dell'URL dell'immagine
-        if (finalImageUrl && finalImageUrl.length > 2000) {
-            return res.status(400).json({ message: 'Image URL is too long. Maximum 2000 characters allowed.' });
-        }
-
-        // Validazione della lunghezza dell'URL del PDF
-        if (finalPdfUrl && finalPdfUrl.length > 2000) {
-            return res.status(400).json({ message: 'PDF URL is too long. Maximum 2000 characters allowed.' });
-        }
-
-        console.log('Image URL being saved:', finalImageUrl); // Aggiunto per debug
-        console.log('PDF URL being saved:', finalPdfUrl); // Aggiunto per debug
-
-        const newEvent = await pool.query(
-            'INSERT INTO events (title, description, event_date, event_time, capacity, image_url, pdf_url, organizer_id, address, location, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING * ',
-            [title, description, event_date, event_time, capacity, finalImageUrl, finalPdfUrl, req.user.id, address, location, category]
-        );
-
-        // Invia notifica agli admin per il nuovo evento in attesa di approvazione
-        const admins = await pool.query('SELECT email FROM users WHERE role = $1', ['admin']);
-        const adminEmails = admins.rows.map(admin => admin.email);
-
-        if (adminEmails.length > 0) {
-            const adminSubject = 'Nuovo Evento in Attesa di Approvazione';
-            const adminHtmlContent = `
-                <h1>Nuovo Evento Creato</h1>
-                <p>Un nuovo evento, <strong>${title}</strong>, è stato creato ed è in attesa della tua approvazione.</p>
-                <p>Descrizione: ${description}</p>
-                <p>Data: ${event_date} ${event_time}</p>
-                <p>Organizzatore: ${req.user.name || req.user.email}</p>
-                <p>Per approvare o rifiutare l'evento, visita la pagina di amministrazione.</p>
-                <a href="http://localhost:3000/admin-page.html">Vai alla pagina Admin</a>
-            `;
-            await sendEmail(adminEmails.join(','), adminSubject, adminHtmlContent);
-        }
-
-        res.status(201).json({ message: 'Event created successfully', event: newEvent.rows[0] });
-    } catch (error) {
-        console.error('Error creating event:', error);
-        res.status(500).json({ message: 'Server error' });
+    if (req.files && req.files.pdf_file && req.files.pdf_file[0]) {
+        finalPdfUrl = '/uploads/' + req.files.pdf_file[0].filename;
     }
-};
 
-const getPendingEvents = async (req, res) => {
+    if (!finalImageUrl) {
+        return res.status(400).json({ message: 'Image URL is required' });
+    }
+
+    // Validazione della lunghezza dell'URL dell'immagine
+    if (finalImageUrl && finalImageUrl.length > 2000) {
+        return res.status(400).json({ message: 'Image URL is too long. Maximum 2000 characters allowed.' });
+    }
+
+    // Validazione della lunghezza dell'URL del PDF
+    if (finalPdfUrl && finalPdfUrl.length > 2000) {
+        return res.status(400).json({ message: 'PDF URL is too long. Maximum 2000 characters allowed.' });
+    }
+
+    console.log('Image URL being saved:', finalImageUrl); // Aggiunto per debug
+    console.log('PDF URL being saved:', finalPdfUrl); // Aggiunto per debug
+
+    const newEvent = await pool.query(
+        'INSERT INTO events (title, description, event_date, event_time, capacity, image_url, pdf_url, organizer_id, address, location, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING * ',
+        [title, description, event_date, event_time, capacity, finalImageUrl, finalPdfUrl, req.user.id, address, location, category]
+    );
+
+    // Invia notifica agli admin per il nuovo evento in attesa di approvazione
+    const admins = await pool.query('SELECT email FROM users WHERE role = $1', ['admin']);
+    const adminEmails = admins.rows.map(admin => admin.email);
+
+    if (adminEmails.length > 0) {
+        const adminSubject = 'Nuovo Evento in Attesa di Approvazione';
+        const adminHtmlContent = `
+            <h1>Nuovo Evento Creato</h1>
+            <p>Un nuovo evento, <strong>${title}</strong>, è stato creato ed è in attesa della tua approvazione.</p>
+            <p>Descrizione: ${description}</p>
+            <p>Data: ${event_date} ${event_time}</p>
+            <p>Organizzatore: ${req.user.name || req.user.email}</p>
+            <p>Per approvare o rifiutare l'evento, visita la pagina di amministrazione.</p>
+            <a href="http://localhost:3000/admin-page.html">Vai alla pagina Admin</a>
+        `;
+        await sendEmail(adminEmails.join(','), adminSubject, adminHtmlContent);
+    }
+
+    res.status(201).json({ message: 'Event created successfully', event: newEvent.rows[0] });
+});
+
+const getPendingEvents = asyncHandler(async (req, res) => {
     try {
         const result = await pool.query(
             'SELECT e.*, u.name as organizer_name FROM events e JOIN users u ON e.organizer_id = u.id WHERE e.status = $1 ORDER BY e.event_date DESC',
@@ -69,9 +67,9 @@ const getPendingEvents = async (req, res) => {
         console.error('Error fetching pending events:', error);
         res.status(500).json({ message: 'Error fetching pending events' });
     }
-};
+});
 
-const approveEvent = async (req, res) => {
+const approveEvent = asyncHandler(async (req, res) => {
     const { id } = req.params;
     try {
         const result = await pool.query(
@@ -100,9 +98,9 @@ const approveEvent = async (req, res) => {
         console.error('Error approving event:', error);
         res.status(500).json({ message: 'Error approving event' });
     }
-};
+});
 
-const rejectEvent = async (req, res) => {
+const rejectEvent = asyncHandler(async (req, res) => {
     const { id } = req.params;
     try {
         const result = await pool.query(
@@ -130,9 +128,9 @@ const rejectEvent = async (req, res) => {
         console.error('Error rejecting event:', error);
         res.status(500).json({ message: 'Error rejecting event' });
     }
-};
+});
 
-const getAllEvents = async (req, res) => {
+const getAllEvents = asyncHandler(async (req, res) => {
     try {
         const result = await pool.query(
             'SELECT e.*, u.name as organizer_name FROM events e JOIN users u ON e.organizer_id = u.id WHERE e.status = $1 ORDER BY e.event_date DESC',
@@ -143,9 +141,9 @@ const getAllEvents = async (req, res) => {
         console.error('Error fetching events:', error);
         res.status(500).json({ message: 'Error fetching events' });
     }
-};
+});
 
-const getMyCreatedEvents = async (req, res) => {
+const getMyCreatedEvents = asyncHandler(async (req, res) => {
     const user_id = req.user.id;
     try {
         const result = await pool.query(
@@ -157,9 +155,9 @@ const getMyCreatedEvents = async (req, res) => {
         console.error('Error fetching my created events:', error);
         res.status(500).json({ message: 'Error fetching my created events' });
     }
-};
+});
 
-const searchEvents = async (req, res) => {
+const searchEvents = asyncHandler(async (req, res) => {
     const { date, location, category } = req.query;
     let query = 'SELECT e.*, u.name as organizer_name FROM events e JOIN users u ON e.organizer_id = u.id WHERE e.status = \'approved\'';
     const params = [];
@@ -192,9 +190,9 @@ const searchEvents = async (req, res) => {
         console.error('Error searching events:', error);
         res.status(500).json({ message: 'Error searching events' });
     }
-};
+});
 
-const registerForEvent = async (req, res) => {
+const registerForEvent = asyncHandler(async (req, res) => {
     const { event_id } = req.body;
     const user_id = req.user.id;
 
@@ -233,9 +231,9 @@ const registerForEvent = async (req, res) => {
         console.error('Errore durante l\\\'iscrizione all\\\'evento:', error);
         res.status(500).json({ message: 'Errore interno del server.' });
     }
-};
+});
 
-const unregisterFromEvent = async (req, res) => {
+const unregisterFromEvent = asyncHandler(async (req, res) => {
     const { event_id } = req.body;
     const user_id = req.user.id;
 
@@ -265,10 +263,10 @@ const unregisterFromEvent = async (req, res) => {
         console.error('Errore durante la disiscrizione dall\\\'evento:', error);
         res.status(500).json({ message: 'Errore interno del server.' });
     }
-};
+});
 
-const getMyRegisteredEvents = async (req, res) => {
-    const user_id = req.user.id; // Assumendo che l\'ID utente sia disponibile in req.user.id
+const getMyRegisteredEvents = asyncHandler(async (req, res) => {
+    const user_id = req.user.id; // Assumendo che l'ID utente sia disponibile in req.user.id
     console.log('getMyRegisteredEvents: user_id from token:', user_id); // Log per debug
 
     try {
@@ -282,9 +280,9 @@ const getMyRegisteredEvents = async (req, res) => {
         console.error('Error fetching registered events:', error);
         res.status(500).json({ message: 'Error fetching registered events' });
     }
-};
+});
 
-const getEventById = async (req, res) => {
+const getEventById = asyncHandler(async (req, res) => {
     const { id } = req.params;
     try {
         const result = await pool.query(
@@ -299,9 +297,9 @@ const getEventById = async (req, res) => {
         console.error('Error fetching event by ID:', error);
         res.status(500).json({ message: 'Error fetching event by ID' });
     }
-};
+});
 
-const updateEvent = async (req, res) => {
+const updateEvent = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { title, description, event_date, event_time, capacity, image_url_existing, pdf_url_existing, address, location, category } = req.body;
     let finalImageUrl = image_url_existing;
@@ -372,9 +370,9 @@ const updateEvent = async (req, res) => {
         console.error('Error updating event:', error);
         res.status(500).json({ message: 'Server error' });
     }
-};
+});
 
-const deleteEvent = async (req, res) => {
+const deleteEvent = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const user_id = req.user.id;
     const user_role = req.user.role;
@@ -403,6 +401,36 @@ const deleteEvent = async (req, res) => {
         console.error('Error deleting event:', error);
         res.status(500).json({ message: 'Server error' });
     }
-};
+});
 
-module.exports = { createEvent, getAllEvents, searchEvents, registerForEvent, unregisterFromEvent, getMyRegisteredEvents, getEventById, updateEvent, deleteEvent, getPendingEvents, approveEvent, rejectEvent, getMyCreatedEvents };
+
+const getChatMessages = asyncHandler(async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const messages = await pool.query(
+            'SELECT cm.*, u.name as sender_name FROM chat_messages cm JOIN users u ON cm.sender_id = u.id WHERE event_id = $1 ORDER BY timestamp ASC',
+            [eventId]
+        );
+        res.status(200).json(messages.rows);
+    } catch (error) {
+        console.error('Errore nel recupero dei messaggi della chat:', error);
+        res.status(500).json({ message: 'Errore interno del server.' });
+    }
+});
+
+module.exports = {
+    createEvent,
+    getAllEvents,
+    searchEvents,
+    registerForEvent,
+    unregisterFromEvent,
+    getMyRegisteredEvents,
+    getEventById,
+    updateEvent,
+    deleteEvent,
+    getPendingEvents,
+    approveEvent,
+    rejectEvent,
+    getMyCreatedEvents,
+    getChatMessages // Esporta la nuova funzione
+};
