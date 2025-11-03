@@ -3,7 +3,8 @@ require('dotenv').config();
 const dotenv = require('dotenv');
 const envConfig = dotenv.config();
 const { pool } = require('./db/config');
-const { insertChatMessage, getUsernameById } = require('./db/queries');
+const queries = require('./db/queries');
+const { insertChatMessage } = require('./db/queries');
 
 console.log('Value of pool after import:', pool);
 
@@ -69,7 +70,12 @@ io.on('connection', (socket) => {
 
     socket.on('chatMessage', async ({ eventId, userId, message }) => {
         try {
-            const username = await getUsernameById(userId);
+            const user = await queries.findUserById(userId);
+            if (!user || user.is_blocked) {
+                console.warn(`Tentativo di invio messaggio da utente bloccato o inesistente: ${userId}`);
+                return;
+            }
+            const username = user.name;
             if (!username) {
                 console.error('Errore: Nome utente non trovato per userId:', userId);
                 return;
@@ -218,7 +224,7 @@ app.get('/api/check-session', (req, res) => {
 app.get('/api/user', isAuthenticated, async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT id, name, email, role FROM users WHERE id = $1',
+            'SELECT id, name, email, role, is_blocked FROM users WHERE id = $1',
             [req.session.userId]
         );
 
@@ -241,7 +247,7 @@ app.get('/api/check-admin', isAuthenticated, isAdmin, (req, res) => {
 // API per recuperare tutti gli utenti (solo per admin)
 app.get('/api/users', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name, email, role FROM users');
+        const result = await pool.query('SELECT id, name, email, role, is_blocked FROM users');
         res.json(result.rows);
     } catch (err) {
         console.error('Errore nel recupero degli utenti:', err);
@@ -275,6 +281,22 @@ app.delete('/api/users/:id', isAuthenticated, isAdmin, async (req, res) => {
         res.status(200).json({ message: 'Utente eliminato con successo' });
     } catch (err) {
         console.error('Errore nell\'eliminazione dell\'utente:', err);
+        res.status(500).json({ message: 'Errore interno del server' });
+    }
+});
+
+// API per bloccare/sbloccare un utente (solo per admin)
+app.put('/api/users/:id/block', isAuthenticated, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { is_blocked } = req.body;
+    try {
+        const updatedUser = await queries.updateUserBlockStatus(id, is_blocked);
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'Utente non trovato' });
+        }
+        res.status(200).json({ message: 'Stato di blocco utente aggiornato con successo', user: updatedUser });
+    } catch (err) {
+        console.error('Errore nell\'aggiornamento dello stato di blocco dell\'utente:', err);
         res.status(500).json({ message: 'Errore interno del server' });
     }
 });

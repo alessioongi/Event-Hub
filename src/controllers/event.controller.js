@@ -392,6 +392,9 @@ const deleteEvent = asyncHandler(async (req, res) => {
             return res.status(403).json({ message: 'Non autorizzato ad eliminare questo evento' });
         }
 
+        // Elimina i messaggi della chat associati all'evento
+        await queries.deleteChatMessagesByEventId(id);
+
         const result = await pool.query('DELETE FROM events WHERE id = $1 RETURNING *', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Evento non trovato dopo la verifica dell\'autorizzazione' });

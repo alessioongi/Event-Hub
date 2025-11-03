@@ -4,28 +4,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     const messageInput = document.getElementById('messageInput');
     const sendMessageBtn = document.getElementById('sendMessageBtn');
     let currentUserId = null; // Variabile per memorizzare l'ID dell'utente
+    let isUserBlocked = false; // Variabile per memorizzare lo stato di blocco dell'utente
+    let currentRoom = null; // Nuova variabile per tracciare la stanza dell'evento corrente
+    let socket = null; // Socket inizializzato successivamente
 
-    // Funzione per recuperare l'ID dell'utente corrente
-    async function fetchUserId() {
+    // Funzione per recuperare l'ID dell'utente corrente e lo stato di blocco
+    async function fetchUserData() {
         try {
             const response = await fetch('/api/user');
             if (response.ok) {
                 const userData = await response.json();
                 currentUserId = userData.id;
+                isUserBlocked = userData.is_blocked; // Assumi che l'API restituisca is_blocked
+                if (isUserBlocked) {
+                    messageInput.disabled = true;
+                    sendMessageBtn.disabled = true;
+                    messageInput.placeholder = 'Non puoi inviare messaggi perché sei bloccato.';
+                }
             } else {
-                console.error('Errore nel recupero dell\'ID utente:', response.statusText);
+                console.error('Errore nel recupero dei dati utente:', response.statusText);
             }
         } catch (error) {
-            console.error('Errore nel recupero dell\'ID utente:', error);
+            console.error('Errore nel recupero dei dati utente:', error);
         }
     }
 
-    // Chiama la funzione per recuperare l'ID utente all'avvio
-    await fetchUserId();
+    // Chiama la funzione per recuperare i dati utente all'avvio
+    await fetchUserData();
 
     // Ottiene i parametri dall'URL
     function getUrlParameter(name) {
-        name = name.replace(/[[\]]/g, '\\$&');
+        name = name.replace(/[[\]]/g, '\$&');
         var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
         var results = regex.exec(window.location.href);
         if (!results) return null;
@@ -34,20 +43,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const eventId = getUrlParameter('eventId');
-    const socket = io(); // Inizializza Socket.IO
 
+    // Inizializza socket solo se c'è un eventId valido
     if (eventId) {
-        // In un'applicazione reale, qui faresti una chiamata API per ottenere i dettagli dell'evento
-        // Per ora, useremo un placeholder
-        eventNameSpan.textContent = `Evento ${eventId}`;
+        socket = io(); // Inizializza Socket.IO
 
-        // Unisciti alla stanza dell'evento
-        socket.emit('joinEvent', eventId);
+        // Chiamata API per ottenere i dettagli dell'evento, incluso il nome
+        try {
+            const eventResponse = await fetch(`/api/events/${eventId}`);
+            if (eventResponse.ok) {
+                const eventData = await eventResponse.json();
+                if (eventNameSpan) { // Controlla che l'elemento esista
+                    eventNameSpan.textContent = eventData.name; // Aggiorna il nome dell'evento
+                } else {
+                    console.error('Elemento con id "eventName" non trovato nel DOM');
+                }
+            } else {
+                console.error('Errore nel recupero dei dettagli dell\'evento:', response.statusText);
+                if (eventNameSpan) {
+                    eventNameSpan.textContent = `Evento non trovato (ID: ${eventId})`;
+                }
+            }
+        } catch (error) {
+            console.error('Errore nel recupero dei dettagli dell\'evento:', error);
+            if (eventNameSpan) {
+                eventNameSpan.textContent = `Errore nel caricamento dell'evento (ID: ${eventId})`;
+            }
+        }
 
-        // Carica i messaggi esistenti
-        loadMessages(eventId);
+        // Funzione per cambiare stanza dell'evento
+        async function changeEventRoom(newEventId) {
+            if (socket && currentRoom) {
+                // Lascia la stanza precedente
+                socket.emit('leaveEvent', currentRoom);
+            }
+            currentRoom = newEventId;
+            // Unisciti alla nuova stanza
+            socket.emit('joinEvent', currentRoom);
+            // Carica i messaggi dell'evento corrente
+            loadMessages(currentRoom);
+        }
+
+        // Cambia stanza con l'eventId corrente
+        await changeEventRoom(eventId);
     } else {
-        eventNameSpan.textContent = 'Nessun Evento Selezionato';
+        if (eventNameSpan) {
+            eventNameSpan.textContent = 'Nessun Evento Selezionato';
+        }
     }
 
     // Funzione per caricare i messaggi
@@ -90,23 +132,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Invia un messaggio
     sendMessageBtn.addEventListener('click', () => {
         const messageText = messageInput.value.trim();
-        if (messageText && currentUserId) {
-            socket.emit('chatMessage', { eventId, userId: currentUserId, message: messageText });
+        if (messageText && currentUserId && !isUserBlocked && socket && currentRoom) {
+            socket.emit('chatMessage', { eventId: currentRoom, userId: currentUserId, message: messageText });
             messageInput.value = '';
+        } else if (isUserBlocked) {
+            alert('Non puoi inviare messaggi perché sei bloccato.');
         } else if (!currentUserId) {
             console.error('Impossibile inviare il messaggio: ID utente non disponibile.');
             alert('Devi essere loggato per inviare messaggi.');
+        } else if (!socket || !currentRoom) {
+            console.error('Impossibile inviare il messaggio: connessione socket non valida o evento non selezionato.');
+            alert('Nessuna connessione alla chat disponibile.');
         }
     });
 
     // Gestisci i messaggi in arrivo
-    socket.on('message', (data) => {
-        displayMessage(data.userName, data.message_text);
-    });
+    if (socket) {
+        socket.on('message', (data) => {
+            displayMessage(data.userName, data.message_text);
+        });
+    }
 
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendMessageBtn.click();
+        }
+    });
+
+    // Pulisci la connessione socket quando la pagina viene chiusa
+    window.addEventListener('beforeunload', () => {
+        if (socket && currentRoom) {
+            socket.emit('leaveEvent', currentRoom);
+            socket.disconnect();
         }
     });
 });

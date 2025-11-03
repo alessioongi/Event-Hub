@@ -159,6 +159,8 @@
                             <th>Nome</th>
                             <th>Email</th>
                             <th>Ruolo</th>
+                            <th>Stato Blocco</th>
+                            <th>Azioni Chat</th>
                             <th>Azioni</th>
                         </tr>
                     </thead>
@@ -288,12 +290,21 @@
                     row.insertCell().textContent = user.name;
                     row.insertCell().textContent = user.email;
                     row.insertCell().textContent = user.role;
-                    const actionCell = row.insertCell();
+                    row.insertCell().textContent = user.is_blocked ? 'Bloccato' : 'Attivo';
+
+                    const chatActionsCell = row.insertCell();
+                    const toggleBlockButton = document.createElement('button');
+                    toggleBlockButton.textContent = user.is_blocked ? 'Sblocca' : 'Blocca';
+                    toggleBlockButton.className = `button is-small ${user.is_blocked ? 'is-success' : 'is-warning'} toggle-block-button`;
+                    toggleBlockButton.onclick = () => toggleUserBlock(user.id, user.is_blocked);
+                    chatActionsCell.appendChild(toggleBlockButton);
+
+                    const actionsCell = row.insertCell();
                     const deleteButton = document.createElement('button');
                     deleteButton.textContent = 'Elimina';
-                    deleteButton.className = 'delete-btn';
+                    deleteButton.className = 'button is-danger is-small delete-user-button';
                     deleteButton.onclick = () => deleteUser(user.id);
-                    actionCell.appendChild(deleteButton);
+                    actionsCell.appendChild(deleteButton);
                 });
             } catch (error) {
                 console.error('Errore durante il recupero degli utenti:', error);
@@ -324,6 +335,35 @@
             } catch (error) {
                 console.error("Errore durante l'eliminazione dell'utente:", error);
                 alert("Impossibile eliminare l'utente: " + error.message);
+            }
+        }
+
+        // Funzione per bloccare/sbloccare un utente
+        async function toggleUserBlock(userId, currentBlockStatus) {
+            const newBlockStatus = !currentBlockStatus;
+            const action = newBlockStatus ? 'bloccare' : 'sbloccare';
+            if (!confirm(`Sei sicuro di voler ${action} questo utente?`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/users/${userId}/block`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_blocked: newBlockStatus })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Errore durante il ${action} dell'utente`);
+                }
+
+                alert(`Utente ${action} con successo!`);
+                fetchUsers(); // Ricarica la lista degli utenti
+            } catch (error) {
+                console.error(`Errore durante il ${action} dell'utente:`, error);
+                alert(`Impossibile ${action} l'utente: ` + error.message);
             }
         }
 

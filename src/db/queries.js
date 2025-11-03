@@ -30,9 +30,21 @@ const queries = {
 
     // Trova un utente per ID
     findUserById: async (id) => {
-        const query = 'SELECT id, name, email, created_at FROM users WHERE id = $1';
+        const query = 'SELECT id, name, email, created_at, role, is_blocked FROM users WHERE id = $1';
         try {
             const result = await db.query(query, [id]);
+            return result.rows[0];
+        } catch (err) {
+            throw err;
+        }
+    },
+
+    // Aggiorna lo stato di blocco di un utente
+    updateUserBlockStatus: async (userId, isBlocked) => {
+        const query = 'UPDATE users SET is_blocked = $1 WHERE id = $2 RETURNING id, name, email, is_blocked';
+        const values = [isBlocked, userId];
+        try {
+            const result = await db.query(query, values);
             return result.rows[0];
         } catch (err) {
             throw err;
@@ -81,6 +93,17 @@ const queries = {
             return result.rows[0] ? result.rows[0].name : null;
         } catch (err) {
             console.error('Errore nel recupero del nome utente:', err);
+            throw err;
+        }
+    },
+
+    // Elimina i messaggi della chat per ID evento
+    deleteChatMessagesByEventId: async (eventId) => {
+        const query = 'DELETE FROM chat_messages WHERE event_id = $1';
+        try {
+            await db.query(query, [eventId]);
+        } catch (err) {
+            console.error('Errore nell\'eliminazione dei messaggi della chat:', err);
             throw err;
         }
     }
