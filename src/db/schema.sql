@@ -7,7 +7,7 @@ DROP TABLE IF EXISTS users CASCADE;
 
 -- Crea la tabella users
 CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
@@ -26,7 +26,7 @@ DROP TABLE IF EXISTS events CASCADE;
 
 -- Crea la tabella events
 CREATE TABLE events (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     event_date TIMESTAMP WITH TIME ZONE NOT NULL,

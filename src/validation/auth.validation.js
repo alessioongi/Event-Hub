@@ -16,6 +16,10 @@ const forgotPasswordValidation = [
 ];
 
 const resetPasswordValidation = [
+    (req, res, next) => {
+        console.log('resetPasswordValidation middleware called. Request body:', req.body);
+        next();
+    },
     body('token').notEmpty().withMessage('Il token è richiesto'),
     body('password').isLength({ min: 6 }).withMessage('La password deve essere lunga almeno 6 caratteri')
 ];

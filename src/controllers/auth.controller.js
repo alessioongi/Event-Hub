@@ -114,9 +114,15 @@ exports.login = async (req, res, next) => {
 };
 
 // Logout utente
-exports.logout = (req, res) => {
-  res.json({
-    message: 'Logout effettuato con successo'
+exports.logout = (req, res, next) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return next(err);
+    }
+    res.clearCookie('connect.sid'); // Assicurati di usare il nome corretto del cookie di sessione
+    res.json({
+      message: 'Logout effettuato con successo'
+    });
   });
 };
 
@@ -190,11 +196,18 @@ exports.forgotPassword = async (req, res, next) => {
 
 // Reset password
 exports.resetPassword = async (req, res, next) => {
+  console.log('resetPassword function called');
   try {
-    const { token, newPassword } = req.body;
+    const { token, password } = req.body;
 
     // Verifica il token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await db.query('SELECT * FROM users WHERE id = $1', [decoded.id]);
+
+    if (user.rows.length === 0) {
+      return res.status(400).json({ message: 'Token non valido o scaduto' });
+    }
 
     // Verifica se il token è valido e non scaduto
     const result = await db.query(
@@ -208,10 +221,13 @@ exports.resetPassword = async (req, res, next) => {
       });
     }
 
+    // Hash della nuova password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     // Aggiorna la password e rimuovi il token di reset
     await db.query(
       'UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expire = NULL WHERE id = $2',
-      [newPassword, decoded.id]
+      [hashedPassword, decoded.id]
     );
 
     res.json({

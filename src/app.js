@@ -138,7 +138,7 @@ app.get('/', (req, res) => {
 });
 
 // Servire i file statici dalla directory 'public'
-app.use('/api/auth', authRoutes);
+app.use('/api', authRoutes);
 app.use('/api', eventRoutes);
 
 app.use(express.static('src/public'));
@@ -308,39 +308,39 @@ app.put('/api/users/:id/block', isAuthenticated, isAdmin, async (req, res) => {
 
 
 // API per il reset della password
-app.post('/api/reset-password', async (req, res) => {
-    const { token, password } = req.body;
-    try {
-        // Trova il token di reset nel database
-        const tokenResult = await pool.query(
-            'SELECT * FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW()',
-            [token]
-        );
+// app.post('/api/reset-password', async (req, res) => {
+//     const { token, password } = req.body;
+//     try {
+//         // Trova il token di reset nel database
+//         const tokenResult = await pool.query(
+//             'SELECT * FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW()',
+//             [token]
+//         );
 
-        if (tokenResult.rowCount === 0) {
-            return res.status(400).json({ message: 'Token non valido o scaduto' });
-        }
+//         if (tokenResult.rowCount === 0) {
+//             return res.status(400).json({ message: 'Token non valido o scaduto' });
+//         }
 
-        const userId = tokenResult.rows[0].user_id;
+//         const userId = tokenResult.rows[0].user_id;
 
-        // Hash della nuova password
-        const hashedPassword = await bcrypt.hash(password, 10);
+//         // Hash della nuova password
+//         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Aggiorna la password dell\'utente
-        await pool.query(
-            'UPDATE users SET password = $1 WHERE id = $2',
-            [hashedPassword, userId]
-        );
+//         // Aggiorna la password dell\'utente
+//         await pool.query(
+//             'UPDATE users SET password = $1 WHERE id = $2',
+//             [hashedPassword, userId]
+//         );
 
-        // Elimina il token di reset
-        await pool.query('DELETE FROM password_reset_tokens WHERE token = $1', [token]);
+//         // Elimina il token di reset
+//         await pool.query('DELETE FROM password_reset_tokens WHERE token = $1', [token]);
 
-        res.json({ message: 'Password resettata con successo' });
-    } catch (err) {
-        console.error('Errore nel reset della password:', err);
-        res.status(500).json({ message: 'Errore interno del server' });
-    }
-});
+//         res.json({ message: 'Password resettata con successo' });
+//     } catch (err) {
+//         console.error('Errore nel reset della password:', err);
+//         res.status(500).json({ message: 'Errore interno del server' });
+//     }
+// });
 
 // Middleware per la gestione degli errori
 app.use((err, req, res, next) => {

@@ -52,10 +52,10 @@ async function runSchema() {
         if (adminCheck.rows.length === 0) {
             // Crea l'utente admin se non esiste
             const hashedPassword = bcrypt.hashSync('admin123', 10);
-            const adminId = await queries.findLowestAvailableUserId(); // Ottieni l'ID disponibile
+            // const adminId = await queries.findLowestAvailableUserId(); // Ottieni l'ID disponibile
             await pool.query(
-                'INSERT INTO users (id, name, email, password, role) VALUES ($1, $2, $3, $4, $5)',
-                [adminId, 'Admin Test', 'admin@test.com', hashedPassword, 'admin']
+                'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4)',
+                ['Admin Test', 'admin@test.com', hashedPassword, 'admin']
             );
             console.log('Utente admin creato con successo.');
         }
@@ -65,10 +65,10 @@ async function runSchema() {
         if (userCheck.rows.length === 0) {
             // Crea l'utente normale se non esiste
             const hashedPasswordUser = bcrypt.hashSync('1', 10); // Password '1'
-            const userId = await queries.findLowestAvailableUserId(); // Ottieni l'ID disponibile
+            // const userId = await queries.findLowestAvailableUserId(); // Ottieni l'ID disponibile
             await pool.query(
-                'INSERT INTO users (id, name, email, password, role) VALUES ($1, $2, $3, $4, $5)',
-                [userId, 'Alessio', 'alessio.ongi@gmail.com', hashedPasswordUser, 'user']
+                'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4)',
+                ['Alessio', 'alessio.ongi@gmail.com', hashedPasswordUser, 'user']
             );
             console.log('Utente normale (Alessio) creato con successo.');
         }

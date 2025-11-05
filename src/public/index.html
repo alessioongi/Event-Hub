@@ -195,6 +195,7 @@
 
         // Funzione per verificare lo stato della sessione
         async function checkSession() {
+            console.log('checkSession chiamata.');
             try {
                 const response = await fetch('/api/check-session');
                 const data = await response.json();
@@ -225,14 +226,13 @@
                         'Content-Type': 'application/json'
                     }
                 });
+                console.log('Risposta logout:', response);
 
                 if (response.ok) {
-                    isAuthenticated = false;
-                    userRole = '';
-                    updateUI({});
-                    window.location.href = '/';
+                    localStorage.removeItem('token');
+                    window.location.href = '/'; // Re-enable redirection
                 } else {
-                    console.error('Errore durante il logout');
+                    console.error('Errore durante il logout:', response.statusText);
                 }
             } catch (error) {
                 console.error('Errore durante il logout:', error);
