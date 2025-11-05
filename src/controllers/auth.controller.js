@@ -24,7 +24,7 @@ exports.register = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Verifica se l'utente esiste già
     const existingUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -39,13 +39,19 @@ exports.register = async (req, res, next) => {
 
     // Crea nuovo utente
     const result = await db.query(
-      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email',
-      [name, email, hashedPassword]
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+      [name, email, hashedPassword, role || 'user']
     );
     const user = result.rows[0];
 
     // Genera token
     const token = generateToken(user.id);
+
+    // Imposta la sessione per il login automatico solo per gli utenti normali
+    if (user.role !== 'admin') {
+      req.session.userId = user.id;
+      req.session.userRole = user.role || 'user'; // Assicurati che il ruolo sia impostato, di default 'user'
+    }
 
     res.status(201).json({
       message: 'Utente registrato con successo',
