@@ -86,14 +86,44 @@ const approveEvent = asyncHandler(async (req, res) => {
         const organizer = await pool.query('SELECT email FROM users WHERE id = $1', [approvedEvent.organizer_id]);
         const organizerEmail = organizer.rows[0].email;
 
+        // Invia email all'organizzatore
         const subject = 'Il tuo evento è stato approvato!';
-        const htmlContent = `
-            <h1>Evento Approvato</h1>
-            <p>Congratulazioni! Il tuo evento, <strong>${approvedEvent.title}</strong>, è stato approvato.</p>
-            <p>Ora è visibile al pubblico.</p>
-            <a href="http://localhost:3000/event-details.html?id=${approvedEvent.id}">Visualizza Evento</a>
-        `;
-        await sendEmail(organizerEmail, subject, htmlContent);
+        const templateData = {
+            userName: organizerEmail,
+            eventName: approvedEvent.title,
+            decision: 'approvato',
+            isApproved: true,
+            isRejected: false,
+            isIgnored: false,
+            year: new Date().getFullYear()
+        };
+        await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+
+        // Verifica se ci sono segnalazioni per questo evento e notifica i segnalatori
+        const reportsResult = await pool.query('SELECT user_id FROM event_reports WHERE event_id = $1', [id]);
+        for (const report of reportsResult.rows) {
+            const reporterEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [report.user_id]);
+            const reporterEmail = reporterEmailResult.rows[0]?.email;
+            if (reporterEmail) {
+                const reporterSubject = `Aggiornamento sulla tua segnalazione per l'evento: ${approvedEvent.title}`;
+                const reporterTemplateData = {
+                    userName: reporterEmail,
+                    eventName: approvedEvent.title,
+                    decision: 'approvato',
+                    isApproved: true,
+                    isRejected: false,
+                    isIgnored: false,
+                    year: new Date().getFullYear()
+                };
+                await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
+            }
+        }
+
+        // Elimina tutte le segnalazioni relative a questo evento dopo l'approvazione
+        await pool.query(
+            'DELETE FROM event_reports WHERE event_id = $1',
+            [id]
+        );
 
         res.status(200).json({ message: 'Evento approvato con successo', event: approvedEvent });
     } catch (error) {
@@ -117,13 +147,44 @@ const rejectEvent = asyncHandler(async (req, res) => {
         const organizer = await pool.query('SELECT email FROM users WHERE id = $1', [rejectedEvent.organizer_id]);
         const organizerEmail = organizer.rows[0].email;
 
-        const subject = 'Il tuo evento è stato rifiutato';
-        const htmlContent = `
-            <h1>Evento Rifiutato</h1>
-            <p>Siamo spiacenti, il tuo evento, <strong>${rejectedEvent.title}</strong>, è stato rifiutato.</p>
-            <p>Per maggiori informazioni, contatta l'amministrazione.</p>
-        `;
-        await sendEmail(organizerEmail, subject, htmlContent);
+        // Invia email all'organizzatore
+        const subject = 'Il tuo evento è stato rifiutato!';
+        const templateData = {
+            userName: organizerEmail,
+            eventName: rejectedEvent.title,
+            decision: 'rifiutato',
+            isApproved: false,
+            isRejected: true,
+            isIgnored: false,
+            year: new Date().getFullYear()
+        };
+        await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+
+        // Verifica se ci sono segnalazioni per questo evento e notifica i segnalatori
+        const reportsResult = await pool.query('SELECT user_id FROM event_reports WHERE event_id = $1', [id]);
+        for (const report of reportsResult.rows) {
+            const reporterEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [report.user_id]);
+            const reporterEmail = reporterEmailResult.rows[0]?.email;
+            if (reporterEmail) {
+                const reporterSubject = `Aggiornamento sulla tua segnalazione per l'evento: ${rejectedEvent.title}`;
+                const reporterTemplateData = {
+                    userName: reporterEmail,
+                    eventName: rejectedEvent.title,
+                    decision: 'rifiutato',
+                    isApproved: false,
+                    isRejected: true,
+                    isIgnored: false,
+                    year: new Date().getFullYear()
+                };
+                await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
+            }
+        }
+
+        // Elimina tutte le segnalazioni relative a questo evento dopo il rifiuto
+        await pool.query(
+            'DELETE FROM event_reports WHERE event_id = $1',
+            [id]
+        );
 
         res.status(200).json({ message: 'Evento rifiutato con successo', event: rejectedEvent });
     } catch (error) {
@@ -438,7 +499,73 @@ const reportEvent = asyncHandler(async (req, res) => {
             [event_id, user_id, report_reason]
         );
 
-        res.status(201).json({ message: 'Segnalazione inviata con successo.' });
+        // Recupera gli indirizzi email degli amministratori
+        const adminEmailsResult = await pool.query('SELECT email FROM users WHERE role = $1', ['admin']);
+        const adminEmails = adminEmailsResult.rows.map(row => row.email);
+
+        // Recupera i dettagli dell'evento
+        const eventDetailsResult = await pool.query('SELECT title, organizer_id FROM events WHERE id = $1', [event_id]);
+        const eventTitle = eventDetailsResult.rows[0] ? eventDetailsResult.rows[0].title : 'Evento Sconosciuto';
+        const eventCreatorId = eventDetailsResult.rows[0] ? eventDetailsResult.rows[0].organizer_id : null;
+
+        // Recupera l'email del segnalatore
+        const reporterEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [user_id]);
+        const reporterEmail = reporterEmailResult.rows[0] ? reporterEmailResult.rows[0].email : null;
+
+        // Recupera l'email del creatore dell'evento
+        let eventCreatorEmail = null;
+        if (eventCreatorId) {
+            const eventCreatorEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [eventCreatorId]);
+            eventCreatorEmail = eventCreatorEmailResult.rows[0] ? eventCreatorEmailResult.rows[0].email : null;
+        }
+
+        // Invia email agli amministratori
+        if (adminEmails.length > 0) {
+            const adminSubject = `Nuova segnalazione di evento: ${eventTitle}`;
+            const adminTemplateData = {
+                eventName: eventTitle,
+                eventId: event_id,
+                reportReason: report_reason,
+                reporterId: user_id,
+                adminPanelLink: `${process.env.FRONTEND_URL}/admin-reported-events.html`,
+                year: new Date().getFullYear(),
+                isAdminNotification: true,
+                message: "È stata inviata una nuova segnalazione per l'evento."
+            };
+            for (const email of adminEmails) {
+                await sendEmail(email, adminSubject, 'newReportEmail', adminTemplateData);
+            }
+        }
+
+        // Invia email al segnalatore
+        if (reporterEmail) {
+            const reporterSubject = `Grazie per la tua segnalazione dell'evento: ${eventTitle}`;
+            const reporterTemplateData = {
+                userName: reporterEmail,
+                eventName: eventTitle,
+                reportReason: report_reason,
+                year: new Date().getFullYear(),
+                isReporterThankYou: true,
+                message: "Abbiamo ricevuto la tua segnalazione e la esamineremo attentamente."
+            };
+            await sendEmail(reporterEmail, reporterSubject, 'newReportEmail', reporterTemplateData);
+        }
+
+        // Invia email al creatore dell'evento (se diverso dal segnalatore)
+        if (eventCreatorEmail && eventCreatorEmail !== reporterEmail) {
+            const creatorSubject = `Il tuo evento '${eventTitle}' è stato segnalato.`;
+            const creatorTemplateData = {
+                userName: eventCreatorEmail,
+                eventName: eventTitle,
+                reportReason: report_reason,
+                year: new Date().getFullYear(),
+                isCreatorNotification: true,
+                message: "Il tuo evento ha ricevuto una segnalazione."
+            };
+            await sendEmail(eventCreatorEmail, creatorSubject, 'newReportEmail', creatorTemplateData);
+        }
+
+        res.status(201).json({ message: 'Evento segnalato con successo.' });
     } catch (error) {
         console.error('Errore durante l\'invio della segnalazione:', error);
         res.status(500).json({ message: 'Errore interno del server.' });
@@ -497,13 +624,38 @@ const rejectReportedEvent = asyncHandler(async (req, res) => {
         const organizer = await pool.query('SELECT email FROM users WHERE id = $1', [rejectedEvent.organizer_id]);
         const organizerEmail = organizer.rows[0].email;
 
+        // Invia email all'organizzatore
         const subject = 'Il tuo evento è stato rifiutato a causa di segnalazioni';
-        const htmlContent = `
-            <h1>Evento Rifiutato</h1>
-            <p>Siamo spiacenti, il tuo evento, <strong>${rejectedEvent.title}</strong>, è stato rifiutato a causa di segnalazioni ricevute.</p>
-            <p>Per maggiori informazioni, contatta l'amministrazione.</p>
-        `;
-        await sendEmail(organizerEmail, subject, htmlContent);
+        const templateData = {
+            userName: organizerEmail,
+            eventName: rejectedEvent.title,
+            decision: 'rifiutato',
+            isApproved: false,
+            isRejected: true,
+            isIgnored: false,
+            year: new Date().getFullYear()
+        };
+        await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+
+        // Recupera tutti i segnalatori per questo evento e invia loro un'email
+        const reportersResult = await pool.query('SELECT DISTINCT user_id FROM event_reports WHERE event_id = $1', [event_id]);
+        for (const reporter of reportersResult.rows) {
+            const reporterEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [reporter.user_id]);
+            const reporterEmail = reporterEmailResult.rows[0]?.email;
+            if (reporterEmail) {
+                const reporterSubject = `Aggiornamento sulla tua segnalazione per l'evento: ${rejectedEvent.title}`;
+                const reporterTemplateData = {
+                    userName: reporterEmail,
+                    eventName: rejectedEvent.title,
+                    decision: 'rifiutato',
+                    isApproved: false,
+                    isRejected: true,
+                    isIgnored: false,
+                    year: new Date().getFullYear()
+                };
+                await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
+            }
+        }
 
         res.status(200).json({ message: 'Evento rifiutato e segnalazioni rimosse con successo' });
     } catch (error) {

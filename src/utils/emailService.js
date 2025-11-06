@@ -1,5 +1,8 @@
 const nodemailer = require('nodemailer');
 const debug = require('debug')('eventhub:email');
+const fs = require('fs');
+const handlebars = require('handlebars');
+const path = require('path');
 
 // Configurazione del trasportatore email
 const transporter = nodemailer.createTransport({
@@ -21,22 +24,31 @@ transporter.verify(function (error, success) {
     }
 });
 
-const sendEmail = async (to, subject, htmlContent) => {
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: to,
-        subject: subject,
-        html: htmlContent
-    };
+const getTemplate = async (templateName) => {
+    const filePath = path.join(__dirname, 'emailTemplates', `${templateName}.html`);
+    const source = await fs.promises.readFile(filePath, 'utf-8');
+    return handlebars.compile(source);
+};
 
+const sendEmail = async (to, subject, templateName, templateData) => {
     try {
+        const template = await getTemplate(templateName);
+        const htmlContent = template(templateData);
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: to,
+            subject: subject,
+            html: htmlContent
+        };
+
         debug('Attempting to send email to %s with subject %s', to, subject);
         await transporter.sendMail(mailOptions);
         debug('Email sent successfully to %s', to);
         return { success: true, message: 'Email inviata con successo' };
     } catch (error) {
-        console.error('Errore nell\'invio dell\'email:', error);
-        debug('Failed to send email to %s: %O', to, error);
+        console.error(`Errore nell\'invio dell\'email con template ${templateName}:`, error);
+        debug(`Failed to send email to %s with template ${templateName}: %O`, to, error);
         return { success: false, message: 'Errore nell\'invio dell\'email', error: error.message };
     }
 };

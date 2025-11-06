@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decisione sulla Segnalazione dell'Evento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #777;
+        }
+        .button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Aggiornamento sulla tua Segnalazione</h1>
+        </div>
+        <div class="content">
+            <p>Ciao {{userName}},</p>
+            <p>Volevamo informarti riguardo alla segnalazione che hai inviato per l'evento <strong>{{eventName}}</strong>.</p>
+            {{#if isApproved}}
+                <p>Siamo lieti di comunicarti che l'evento <strong>{{eventName}}</strong> è stato approvato e sarà disponibile sulla piattaforma.</p>
+                <p>Grazie per aver contribuito a mantenere la nostra comunità sicura e piacevole.</p>
+            {{/if}}
+            {{#if isRejected}}
+                <p>L'evento <strong>{{eventName}}</strong> è stato rifiutato e rimosso dalla piattaforma.</p>
+                <p>Grazie per averci aiutato a mantenere la qualità dei contenuti.</p>
+            {{/if}}
+            {{#if isIgnored}}
+                <p>Abbiamo esaminato la tua segnalazione per l'evento <strong>{{eventName}}</strong>. Abbiamo deciso di ignorare la segnalazione e l'evento rimarrà sulla piattaforma.</p>
+                <p>Apprezziamo comunque il tuo impegno nel segnalare contenuti che ritieni inappropriati.</p>
+            {{/if}}
+            <p>La decisione finale è: <strong>{{decision}}</strong>.</p>
+            <p>Se hai ulteriori domande, non esitare a contattarci.</p>
+            <p>Cordiali saluti,</p>
+            <p>Il Team di EventHub</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} EventHub. Tutti i diritti riservati.</p>
+        </div>
+    </div>
+</body>
+</html>

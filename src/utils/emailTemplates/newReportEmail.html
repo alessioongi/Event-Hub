@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifica Segnalazione Evento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            background-color: #FFC107;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #777;
+        }
+        .button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Notifica Segnalazione Evento</h1>
+        </div>
+        <div class="content">
+            <p>Ciao {{userName}},</p>
+            <p>{{message}}</p>
+
+            {{#if isAdminNotification}}
+                <p>Un evento è stato segnalato. Di seguito i dettagli:</p>
+                <ul>
+                    <li><strong>Nome Evento:</strong> {{eventName}}</li>
+                    <li><strong>Motivo Segnalazione:</strong> {{reportReason}}</li>
+                </ul>
+                <p>Puoi gestire le segnalazioni nel pannello di amministrazione:</p>
+                <a href="{{adminPanelLink}}" class="button">Vai al Pannello Admin</a>
+            {{/if}}
+
+            {{#if isReporterThankYou}}
+                <p>Grazie per aver segnalato l'evento <strong>{{eventName}}</strong>.</p>
+                <p>Abbiamo ricevuto la tua segnalazione e la esamineremo attentamente.</p>
+                <p>Ti terremo aggiornato sulla decisione presa.</p>
+            {{/if}}
+
+            {{#if isCreatorNotification}}
+                <p>Il tuo evento <strong>{{eventName}}</strong> ha ricevuto una segnalazione.</p>
+                <p>Il motivo della segnalazione è: {{reportReason}}.</p>
+                <p>Il nostro team esaminerà la segnalazione e prenderà una decisione.</p>
+                <p>Ti informeremo sull'esito.</p>
+            {{/if}}
+
+            <p>Cordiali saluti,</p>
+            <p>Il Team di EventHub</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} EventHub. Tutti i diritti riservati.</p>
+        </div>
+    </div>
+</body>
+</html>
