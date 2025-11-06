@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createEvent, getAllEvents, searchEvents, registerForEvent, unregisterFromEvent, getMyRegisteredEvents, getEventById, updateEvent, deleteEvent, getPendingEvents, approveEvent, rejectEvent, getMyCreatedEvents, getChatMessages } = require('../controllers/event.controller');
+const { createEvent, getAllEvents, searchEvents, registerForEvent, unregisterFromEvent, getMyRegisteredEvents, getEventById, updateEvent, deleteEvent, getPendingEvents, approveEvent, rejectEvent, getMyCreatedEvents, getChatMessages, reportEvent } = require('../controllers/event.controller');
 const queries = require('../db/queries');
 const upload = require('../middleware/upload');
 const { authorize, protect } = require('../middleware/auth.middleware');
@@ -36,5 +36,7 @@ router.post('/events/register', protect, registerForEvent);
 router.post('/events/unregister', protect, unregisterFromEvent);
 
 router.get('/:id/chat-messages', protect, getChatMessages);
+
+router.post('/report-event', protect, reportEvent);
 
 module.exports = router;

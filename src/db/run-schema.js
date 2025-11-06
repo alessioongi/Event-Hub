@@ -38,6 +38,16 @@ async function runSchema() {
         }
 
         try {
+            console.log('Esecuzione dello script create_event_reports_table.sql...');
+            const eventReportsSqlPath = path.join(__dirname, 'create_event_reports_table.sql');
+            const eventReportsSql = fs.readFileSync(eventReportsSqlPath, 'utf8');
+            await pool.query(eventReportsSql);
+            console.log('Tabella event_reports creata con successo.');
+        } catch (err) {
+            console.warn('Attenzione: Errore durante l\'esecuzione di create_event_reports_table.sql (potrebbe essere già esistente): ', err.message);
+        }
+
+        try {
             console.log('Esecuzione dello script add_is_blocked_column_to_users.sql...');
             const addIsBlockedSqlPath = path.join(__dirname, 'add_is_blocked_column_to_users.sql');
             const addIsBlockedSql = fs.readFileSync(addIsBlockedSqlPath, 'utf8');

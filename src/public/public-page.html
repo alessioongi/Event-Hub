@@ -388,6 +388,7 @@
                                 ${buttonText}
                             </button>
                             <button class="button" onclick="handleChatEvent('${event.id}')">Chat</button>
+                            <button class="button" onclick="handleReportEvent('${event.id}')">Segnala</button>
                         </div>
                     `;
                     eventsListDiv.appendChild(eventCard);
@@ -503,9 +504,14 @@
              });
 
              window.handleChatEvent = (eventId) => {
-                 window.location.href = `/chat.html?eventId=${eventId}`;
-             };
+                window.location.href = `/chat.html?eventId=${eventId}`;
+            };
 
-         </script>
+            window.handleReportEvent = (eventId) => {
+                window.location.href = `/report-event.html?eventId=${eventId}`;
+            };
+
+            checkSession();
+        </script>
     </body>
 </html>

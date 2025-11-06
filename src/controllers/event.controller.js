@@ -423,6 +423,28 @@ const getChatMessages = asyncHandler(async (req, res) => {
     }
 });
 
+const reportEvent = asyncHandler(async (req, res) => {
+    const { event_id, report_reason } = req.body;
+    const user_id = req.user.id;
+
+    if (!event_id || !report_reason) {
+        return res.status(400).json({ message: 'ID evento e motivo della segnalazione sono obbligatori.' });
+    }
+
+    try {
+        // Inserimento della segnalazione nel database (tabella da creare successivamente)
+        await pool.query(
+            'INSERT INTO event_reports (event_id, user_id, report_reason, reported_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
+            [event_id, user_id, report_reason]
+        );
+
+        res.status(201).json({ message: 'Segnalazione inviata con successo.' });
+    } catch (error) {
+        console.error('Errore durante l\'invio della segnalazione:', error);
+        res.status(500).json({ message: 'Errore interno del server.' });
+    }
+});
+
 module.exports = {
     createEvent,
     getAllEvents,
@@ -437,5 +459,6 @@ module.exports = {
     approveEvent,
     rejectEvent,
     getMyCreatedEvents,
-    getChatMessages // Esporta la nuova funzione
+    getChatMessages,
+    reportEvent // Nuova funzione esportata
 };
