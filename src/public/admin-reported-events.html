@@ -357,17 +357,18 @@
                 reportedEventsList.innerHTML = ''; // Clear loading message
 
                 reportedEvents.forEach(report => {
+                    console.log('Report object:', report);
                     const eventCard = document.createElement('div');
                     eventCard.className = 'reported-event-card';
                     eventCard.innerHTML = `
                         <h2>${escapeHtml(report.event_name ?? '')}</h2>
                         <p><strong>Segnalato da:</strong> ${escapeHtml(report.reporter_email ?? '')}</p>
                         <p><strong>ID Evento:</strong> ${escapeHtml(report.event_id ?? '')}</p>
-                        <p><strong>Data Segnalazione:</strong> ${new Date(report.report_date).toLocaleString()}</p>
-                        <p class="report-reason"><strong>Motivo:</strong> ${escapeHtml(report.reason ?? '')}</p>
+                        <p><strong>Data Segnalazione:</strong> ${report.reported_at ? new Date(report.reported_at).getFullYear() + '-' + (new Date(report.reported_at).getMonth() + 1).toString().padStart(2, '0') + '-' + new Date(report.reported_at).getDate().toString().padStart(2, '0') + ' ' + new Date(report.reported_at).getHours().toString().padStart(2, '0') + ':' + new Date(report.reported_at).getMinutes().toString().padStart(2, '0') : ''}</p>
+                        <p class="report-reason"><strong>Motivo:</strong> ${escapeHtml(report.report_reason ?? '')}</p>
                         <div class="actions">
-                            <button class="button ignore-button" data-report-id="${escapeHtml(report.id ?? '')}">Ignora</button>
-                            <button class="button reject-button" data-event-id="${escapeHtml(report.event_id ?? '')}" data-report-id="${escapeHtml(report.id ?? '')}">Rifiuta Evento</button>
+                            <button class="button ignore-button" data-report-id="${escapeHtml(report.report_id ?? '')}">Ignora Segnalazione</button>
+                            <button class="button reject-button" data-event-id="${escapeHtml(report.event_id ?? '')}" data-report-id="${escapeHtml(report.report_id ?? '')}">Accetta Segnalazione</button>
                         </div>
                     `;
                     reportedEventsList.appendChild(eventCard);

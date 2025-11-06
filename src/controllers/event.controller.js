@@ -448,7 +448,7 @@ const reportEvent = asyncHandler(async (req, res) => {
 const getReportedEvents = asyncHandler(async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT er.id as report_id, er.report_reason, er.reported_at, e.id as event_id, e.title as event_name, e.description as event_description, e.event_date, e.event_time, e.location as event_location, u.id as user_id, u.name as reporter_name FROM event_reports er JOIN events e ON er.event_id = e.id JOIN users u ON er.user_id = u.id ORDER BY er.reported_at DESC'
+            'SELECT er.id as report_id, er.report_reason, er.reported_at as report_date, e.id as event_id, e.title as event_name, e.description as event_description, e.event_date, e.event_time, e.location as event_location, u.id as user_id, u.name as reporter_name FROM event_reports er JOIN events e ON er.event_id = e.id JOIN users u ON er.user_id = u.id ORDER BY er.reported_at DESC'
         );
         res.status(200).json(result.rows);
     } catch (error) {
