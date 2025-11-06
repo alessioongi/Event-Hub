@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createEvent, getAllEvents, searchEvents, registerForEvent, unregisterFromEvent, getMyRegisteredEvents, getEventById, updateEvent, deleteEvent, getPendingEvents, approveEvent, rejectEvent, getMyCreatedEvents, getChatMessages, reportEvent } = require('../controllers/event.controller');
+const { createEvent, getAllEvents, searchEvents, registerForEvent, unregisterFromEvent, getMyRegisteredEvents, getEventById, updateEvent, deleteEvent, getPendingEvents, approveEvent, rejectEvent, getMyCreatedEvents, getChatMessages, reportEvent, getReportedEvents, ignoreReport, rejectReportedEvent } = require('../controllers/event.controller');
 const queries = require('../db/queries');
 const upload = require('../middleware/upload');
 const { authorize, protect } = require('../middleware/auth.middleware');
@@ -38,5 +38,10 @@ router.post('/events/unregister', protect, unregisterFromEvent);
 router.get('/:id/chat-messages', protect, getChatMessages);
 
 router.post('/report-event', protect, reportEvent);
+
+// Rotte Admin per eventi segnalati
+router.get('/admin/reported-events', protect, authorize('admin'), getReportedEvents);
+router.post('/admin/ignore-report', protect, authorize('admin'), ignoreReport);
+router.post('/admin/reject-reported-event', protect, authorize('admin'), rejectReportedEvent);
 
 module.exports = router;

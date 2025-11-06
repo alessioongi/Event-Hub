@@ -445,6 +445,73 @@ const reportEvent = asyncHandler(async (req, res) => {
     }
 });
 
+const getReportedEvents = asyncHandler(async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT er.id as report_id, er.report_reason, er.reported_at, e.id as event_id, e.title as event_name, e.description as event_description, e.event_date, e.event_time, e.location as event_location, u.id as user_id, u.name as reporter_name FROM event_reports er JOIN events e ON er.event_id = e.id JOIN users u ON er.user_id = u.id ORDER BY er.reported_at DESC'
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching reported events:', error);
+        res.status(500).json({ message: 'Error fetching reported events' });
+    }
+});
+
+const ignoreReport = asyncHandler(async (req, res) => {
+    const { report_id } = req.body;
+    try {
+        const result = await pool.query(
+            'DELETE FROM event_reports WHERE id = $1 RETURNING * ',
+            [report_id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Segnalazione non trovata' });
+        }
+        res.status(200).json({ message: 'Segnalazione ignorata con successo' });
+    } catch (error) {
+        console.error('Error ignoring report:', error);
+        res.status(500).json({ message: 'Error ignoring report' });
+    }
+});
+
+const rejectReportedEvent = asyncHandler(async (req, res) => {
+    const { event_id, report_id } = req.body;
+    try {
+        // Rifiuta l'evento
+        const eventResult = await pool.query(
+            'UPDATE events SET status = $1 WHERE id = $2 RETURNING * ',
+            ['rejected', event_id]
+        );
+        if (eventResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Evento non trovato' });
+        }
+
+        // Elimina tutte le segnalazioni relative a questo evento
+        await pool.query(
+            'DELETE FROM event_reports WHERE event_id = $1',
+            [event_id]
+        );
+
+        // Invia notifica all'organizzatore
+        const rejectedEvent = eventResult.rows[0];
+        const organizer = await pool.query('SELECT email FROM users WHERE id = $1', [rejectedEvent.organizer_id]);
+        const organizerEmail = organizer.rows[0].email;
+
+        const subject = 'Il tuo evento è stato rifiutato a causa di segnalazioni';
+        const htmlContent = `
+            <h1>Evento Rifiutato</h1>
+            <p>Siamo spiacenti, il tuo evento, <strong>${rejectedEvent.title}</strong>, è stato rifiutato a causa di segnalazioni ricevute.</p>
+            <p>Per maggiori informazioni, contatta l'amministrazione.</p>
+        `;
+        await sendEmail(organizerEmail, subject, htmlContent);
+
+        res.status(200).json({ message: 'Evento rifiutato e segnalazioni rimosse con successo' });
+    } catch (error) {
+        console.error('Error rejecting reported event:', error);
+        res.status(500).json({ message: 'Error rejecting reported event' });
+    }
+});
+
 module.exports = {
     createEvent,
     getAllEvents,
@@ -460,5 +527,8 @@ module.exports = {
     rejectEvent,
     getMyCreatedEvents,
     getChatMessages,
-    reportEvent // Nuova funzione esportata
+    reportEvent,
+    getReportedEvents,
+    ignoreReport,
+    rejectReportedEvent
 };

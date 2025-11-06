@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventi Segnalati - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background-color: #007bff;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+        }
+        .nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .nav a:hover {
+            background-color: #f5f5f5;
+            color: #007bff;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background-color 0.2s;
+            background-color: #007bff;
+            color: white;
+        }
+        .login-btn {
+            background-color: white;
+            color: #007bff;
+            border: none;
+        }
+        .login-btn:hover {
+            background-color: #e0e0e0;
+        }
+        .logout-btn {
+            background-color: red;
+            color: white;
+            border: none;
+        }
+        .logout-btn:hover {
+            background-color: #cc0000;
+        }
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+        .user-role {
+            font-size: 14px;
+            color: white;
+        }
+        .content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .content h1 {
+            color: #1a73e8;
+            margin-top: 0;
+        }
+        .content p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .admin-controls {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .admin-controls .button {
+            flex: 1 1 auto;
+            padding: 10px;
+            border-radius: 3px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            text-align: center;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .admin-controls .button:hover {
+            background-color: #0056b3;
+        }
+        .reported-event-card {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .reported-event-card h2 {
+            color: #007bff;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .reported-event-card p {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        .reported-event-card .report-reason {
+            font-style: italic;
+            color: #dc3545;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        .reported-event-card .actions {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .reported-event-card .actions button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .reported-event-card .actions .ignore-button {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .reported-event-card .actions .ignore-button:hover {
+            background-color: #e0a800;
+        }
+        .reported-event-card .actions .reject-button {
+            background-color: #dc3545;
+            color: #fff;
+        }
+        .reported-event-card .actions .reject-button:hover {
+            background-color: #c82333;
+        }
+        .no-reports {
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+            margin-top: 50px;
+        }
+        .loading-message {
+            text-align: center;
+            color: #007bff;
+            font-size: 1.2em;
+            margin-top: 50px;
+        }
+        .error-message {
+            text-align: center;
+            color: #dc3545;
+            font-size: 1.2em;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">EventHub</div>
+            <div class="nav">
+                <a href="/">Home</a>
+                <a href="/public-page.html">Pagina Pubblica</a>
+                <a href="/create-event.html" id="createEventLink" style="display: none;">Crea Evento</a>
+                <a href="/my-created-events" id="myCreatedEventsLink" style="display: none;">I miei eventi creati</a>
+                <a href="/admin-page.html" id="adminLink" style="display: none;">Area Admin</a>
+            </div>
+            <div class="auth-buttons">
+                <div class="user-info">
+                    <span>Benvenuto, <span id="userName"></span></span>
+                    <span class="user-role">(<span id="userRole"></span>)</span>
+                </div>
+                <a href="/login.html" class="button login-btn" id="loginBtn">Accedi</a>
+                <button class="button logout-btn" id="logoutBtn" style="display: none;" onclick="handleLogout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <h1>Eventi Segnalati</h1>
+            <div id="reportedEventsList">
+                <p class="loading-message">Caricamento segnalazioni...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isAuthenticated = false;
+        let userRole = '';
+
+        function updateUI(userData) {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.querySelector('.user-info');
+            const adminLink = document.getElementById('adminLink');
+            const userName = document.getElementById('userName');
+            const userRoleSpan = document.getElementById('userRole');
+            const createEventLink = document.getElementById('createEventLink');
+            const myCreatedEventsLink = document.getElementById('myCreatedEventsLink');
+
+            if (isAuthenticated) {
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                userInfo.style.display = 'flex';
+                userName.textContent = userData.name || userData.email;
+                userRoleSpan.textContent = userData.role;
+                createEventLink.style.display = 'block';
+                myCreatedEventsLink.style.display = 'block';
+
+                if (userData.role === 'admin') {
+                    adminLink.style.display = 'block';
+                } else {
+                    adminLink.style.display = 'none';
+                }
+            } else {
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                userInfo.style.display = 'none';
+                createEventLink.style.display = 'none';
+                myCreatedEventsLink.style.display = 'none';
+                adminLink.style.display = 'none';
+            }
+        }
+
+        async function checkSession() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/check-session', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                isAuthenticated = data.isAuthenticated;
+                if (isAuthenticated) {
+                    const userResponse = await fetch('/api/user', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    const userData = await userResponse.json();
+                    await updateUI(userData);
+                } else {
+                    updateUI({});
+                }
+            } catch (error) {
+                console.error('Errore nel controllo della sessione:', error);
+                updateUI({});
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    isAuthenticated = false;
+                    userRole = '';
+                    updateUI({});
+                    window.location.href = '/login.html';
+                } else {
+                    console.error('Errore durante il logout');
+                }
+            } catch (error) {
+                console.error('Errore durante il logout:', error);
+            }
+        }
+
+        checkSession();
+
+        function escapeHtml(unsafe) {
+            unsafe = String(unsafe); // Ensure unsafe is always a string
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;")
+                 .replace(/`/g, "&#96;"); // Escape backticks
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const reportedEventsList = document.getElementById('reportedEventsList');
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                reportedEventsList.innerHTML = '<p class=\"error-message\">Non autorizzato. Effettua il login come amministratore.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/reported-events', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Errore nel recupero degli eventi segnalati.');
+                }
+
+                const reportedEvents = await response.json();
+
+                if (reportedEvents.length === 0) {
+                    reportedEventsList.innerHTML = '<p class=\"no-reports\">Nessun evento segnalato al momento.</p>';
+                    return;
+                }
+
+                reportedEventsList.innerHTML = ''; // Clear loading message
+
+                reportedEvents.forEach(report => {
+                    const eventCard = document.createElement('div');
+                    eventCard.className = 'reported-event-card';
+                    eventCard.innerHTML = `
+                        <h2>${escapeHtml(report.event_name ?? '')}</h2>
+                        <p><strong>Segnalato da:</strong> ${escapeHtml(report.reporter_email ?? '')}</p>
+                        <p><strong>ID Evento:</strong> ${escapeHtml(report.event_id ?? '')}</p>
+                        <p><strong>Data Segnalazione:</strong> ${new Date(report.report_date).toLocaleString()}</p>
+                        <p class="report-reason"><strong>Motivo:</strong> ${escapeHtml(report.reason ?? '')}</p>
+                        <div class="actions">
+                            <button class="button ignore-button" data-report-id="${escapeHtml(report.id ?? '')}">Ignora</button>
+                            <button class="button reject-button" data-event-id="${escapeHtml(report.event_id ?? '')}" data-report-id="${escapeHtml(report.id ?? '')}">Rifiuta Evento</button>
+                        </div>
+                    `;
+                    reportedEventsList.appendChild(eventCard);
+                });
+
+                reportedEventsList.addEventListener('click', async (event) => {
+                    if (event.target.classList.contains('ignore-button')) {
+                        const reportId = event.target.dataset.reportId;
+                        if (confirm('Sei sicuro di voler ignorare questa segnalazione?')) {
+                            await handleAdminAction('/api/admin/ignore-report', { report_id: reportId }, token);
+                        }
+                    } else if (event.target.classList.contains('reject-button')) {
+                        const eventId = event.target.dataset.eventId;
+                        const reportId = event.target.dataset.reportId;
+                        if (confirm('Sei sicuro di voler rifiutare questo evento e la relativa segnalazione?')) {
+                            await handleAdminAction('/api/admin/reject-reported-event', { event_id: eventId, report_id: reportId }, token);
+                        }
+                    }
+                });
+            } catch (error) {
+                reportedEventsList.innerHTML = `<p class="error-message">Errore: ${error.message}</p>`;
+            }
+        });
+
+        async function handleAdminAction(url, body, token) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Errore durante l\'azione amministrativa.');
+                }
+
+                alert('Azione completata con successo!');
+                location.reload(); // Reload the page to update the list
+            } catch (error) {
+                 alert('Errore: ' + error.message);
+             }
+         }
+     </script>
+ </body>
+</html>
