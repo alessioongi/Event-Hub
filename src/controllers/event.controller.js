@@ -594,6 +594,54 @@ const ignoreReport = asyncHandler(async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Segnalazione non trovata' });
         }
+
+        const ignoredReport = result.rows[0];
+        const eventId = ignoredReport.event_id;
+        const reporterId = ignoredReport.user_id;
+
+        // Recupera i dettagli dell'evento
+        const eventResult = await pool.query('SELECT title, organizer_id FROM events WHERE id = $1', [eventId]);
+        if (eventResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Evento non trovato per la segnalazione ignorata' });
+        }
+        const eventDetails = eventResult.rows[0];
+
+        // Invia email all'organizzatore (se applicabile, anche se la segnalazione è ignorata, l'organizzatore potrebbe volerlo sapere)
+        const organizer = await pool.query('SELECT email FROM users WHERE id = $1', [eventDetails.organizer_id]);
+        const organizerEmail = organizer.rows[0]?.email;
+
+        if (organizerEmail) {
+            const organizerSubject = `Aggiornamento sulla segnalazione per il tuo evento: ${eventDetails.title}`;
+            const organizerTemplateData = {
+                userName: organizerEmail,
+                eventName: eventDetails.title,
+                decision: 'ignorata',
+                isApproved: false,
+                isRejected: false,
+                isIgnored: true,
+                year: new Date().getFullYear()
+            };
+            await sendEmail(organizerEmail, organizerSubject, 'reportDecisionEmail', organizerTemplateData);
+        }
+
+        // Invia email al segnalatore
+        const reporterEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [reporterId]);
+        const reporterEmail = reporterEmailResult.rows[0]?.email;
+
+        if (reporterEmail) {
+            const reporterSubject = `Aggiornamento sulla tua segnalazione per l'evento: ${eventDetails.title}`;
+            const reporterTemplateData = {
+                userName: reporterEmail,
+                eventName: eventDetails.title,
+                decision: 'ignorata',
+                isApproved: false,
+                isRejected: false,
+                isIgnored: true,
+                year: new Date().getFullYear()
+            };
+            await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
+        }
+
         res.status(200).json({ message: 'Segnalazione ignorata con successo' });
     } catch (error) {
         console.error('Error ignoring report:', error);
