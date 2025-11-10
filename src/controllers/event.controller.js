@@ -3,6 +3,7 @@ const { sendEmail } = require('../utils/emailService');
 const queries = require('../db/queries');
 const { getChatMessagesByEventId, findLowestAvailableEventId } = queries;
 const asyncHandler = require('express-async-handler');
+// const { getAllUserEmails } = require('./event.controller'); // Rimuovo l'importazione circolare
 
 const createEvent = asyncHandler(async (req, res) => {
     const { title, description, event_date, event_time, capacity, image_url, address, location, category } = req.body;
@@ -86,6 +87,8 @@ const approveEvent = asyncHandler(async (req, res) => {
         const organizer = await pool.query('SELECT email FROM users WHERE id = $1', [approvedEvent.organizer_id]);
         const organizerEmail = organizer.rows[0].email;
 
+        const eventLink = `${process.env.FRONTEND_URL}/event-details.html?id=${approvedEvent.id}`;
+
         // Invia email all'organizzatore
         const subject = 'Il tuo evento è stato approvato!';
         const templateData = {
@@ -95,9 +98,25 @@ const approveEvent = asyncHandler(async (req, res) => {
             isApproved: true,
             isRejected: false,
             isIgnored: false,
+            eventLink: eventLink,
             year: new Date().getFullYear()
         };
         await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+
+        // Invia notifica a tutti gli utenti
+        const allUserEmails = await getAllUserEmails();
+        const notificationSubject = `Nuovo Evento Approvato: ${approvedEvent.title}`;
+        const notificationTemplateData = {
+            eventName: approvedEvent.title,
+            eventLink: eventLink,
+            eventDate: new Date(approvedEvent.event_date).toLocaleDateString('it-IT'),
+            eventLocation: approvedEvent.location,
+            year: new Date().getFullYear()
+        };
+
+        for (const userEmail of allUserEmails) {
+            await sendEmail(userEmail, notificationSubject, 'eventApprovedNotification', notificationTemplateData);
+        }
 
         // Verifica se ci sono segnalazioni per questo evento e notifica i segnalatori
         const reportsResult = await pool.query('SELECT user_id FROM event_reports WHERE event_id = $1', [id]);
@@ -160,6 +179,23 @@ const rejectEvent = asyncHandler(async (req, res) => {
             year: new Date().getFullYear()
         };
         await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+
+        // Invia notifica a tutti gli utenti per evento rifiutato
+        const allUserEmails = await getAllUserEmails();
+        const eventLink = `${process.env.FRONTEND_URL}/event-details.html?id=${rejectedEvent.id}`;
+        const notificationSubject = `Evento Rifiutato: ${rejectedEvent.title}`;
+        const notificationTemplateData = {
+            eventName: rejectedEvent.title,
+            eventLink: eventLink,
+            eventDate: new Date(rejectedEvent.event_date).toLocaleDateString('it-IT'),
+            eventLocation: rejectedEvent.location,
+            isRejected: true, // Flag per indicare che l'evento è stato rifiutato
+            year: new Date().getFullYear()
+        };
+
+        for (const userEmail of allUserEmails) {
+            await sendEmail(userEmail, notificationSubject, 'eventApprovedNotification', notificationTemplateData);
+        }
 
         // Verifica se ci sono segnalazioni per questo evento e notifica i segnalatori
         const reportsResult = await pool.query('SELECT user_id FROM event_reports WHERE event_id = $1', [id]);
@@ -445,27 +481,43 @@ const deleteEvent = asyncHandler(async (req, res) => {
     const user_role = req.user.role;
 
     try {
-        // Recupera l'evento per verificare l'organizzatore
-        const eventResult = await pool.query('SELECT organizer_id FROM events WHERE id = $1', [id]);
+        // Recupera l'evento per verificare l'organizzatore e ottenere i dettagli completi
+        const eventDetailsResult = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
 
-        if (eventResult.rows.length === 0) {
+        if (eventDetailsResult.rows.length === 0) {
             return res.status(404).json({ message: 'Evento non trovato' });
         }
 
-        const event = eventResult.rows[0];
+        const eventToDelete = eventDetailsResult.rows[0];
 
         // Verifica se l'utente è l'organizzatore o un amministratore
-        if (event.organizer_id !== user_id && user_role !== 'admin') {
+        if (eventToDelete.organizer_id !== user_id && user_role !== 'admin') {
             return res.status(403).json({ message: 'Non autorizzato ad eliminare questo evento' });
         }
 
         // Elimina i messaggi della chat associati all'evento
         await queries.deleteChatMessagesByEventId(id);
 
-        const result = await pool.query('DELETE FROM events WHERE id = $1 RETURNING *', [id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Evento non trovato dopo la verifica dell\'autorizzazione' });
+        // Elimina l'evento
+        await pool.query('DELETE FROM events WHERE id = $1', [id]);
+
+        // Invia notifica a tutti gli utenti
+        const allUserEmails = await getAllUserEmails();
+        if (allUserEmails.length > 0) {
+            const eventLink = `${process.env.FRONTEND_URL}/event-details.html?id=${id}`;
+            const notificationTemplateData = {
+                eventName: eventToDelete.title,
+                eventDescription: eventToDelete.description,
+                eventDate: eventToDelete.event_date,
+                eventTime: eventToDelete.event_time,
+                eventLink: eventLink,
+                isDeleted: true,
+                year: new Date().getFullYear()
+            };
+            const subject = `Aggiornamento Evento: ${eventToDelete.title} è stato eliminato`;
+            await sendEmail(allUserEmails.join(','), subject, 'eventApprovedNotification', notificationTemplateData);
         }
+
         res.status(200).json({ message: 'Evento eliminato con successo' });
     } catch (error) {
         console.error('Error deleting event:', error);
@@ -719,6 +771,17 @@ const rejectReportedEvent = asyncHandler(async (req, res) => {
     }
 });
 
+const getAllUserEmails = async () => {
+    try {
+        const result = await pool.query('SELECT email FROM users');
+        console.log("Recuperati indirizzi email utenti:", result.rows.map(row => row.email)); // Aggiunto log
+        return result.rows.map(row => row.email);
+    } catch (error) {
+        console.error('Error fetching all user emails:', error);
+        return [];
+    }
+};
+
 module.exports = {
     createEvent,
     getAllEvents,
@@ -737,5 +800,6 @@ module.exports = {
     reportEvent,
     getReportedEvents,
     ignoreReport,
-    rejectReportedEvent
+    rejectReportedEvent,
+    getAllUserEmails
 };

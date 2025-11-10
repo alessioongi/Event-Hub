@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evento Approvato - EventHub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: none;
+            -ms-text-size-adjust: none;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            padding: 20px;
+            text-align: left;
+            color: #333333;
+            line-height: 1.6;
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #aaaaaa;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 20px;
+        }
+        .event-details {
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            margin: 15px 0;
+            padding: 10px 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            {{#if isRejected}}
+            <h2>Il tuo evento è stato rifiutato!</h2>
+            {{else if isDeleted}}
+            <h2>Il tuo evento è stato eliminato!</h2>
+            {{else}}
+            <h2>Il tuo evento è stato approvato!</h2>
+            {{/if}}
+        </div>
+        <div class="content">
+            <p>Ciao,</p>
+            {{#if isRejected}}
+            <p>Siamo spiacenti di informarti che l'evento <strong>{{eventName}}</strong> è stato rifiutato e non sarà visibile sulla piattaforma EventHub.</p>
+            <div class="event-details">
+                <p><strong>Nome Evento:</strong> {{eventName}}</p>
+                <p><strong>Data:</strong> {{eventDate}}</p>
+                <p><strong>Luogo:</strong> {{eventLocation}}</p>
+            </div>
+            <p>Per maggiori informazioni, contatta il supporto.</p>
+            {{else if isDeleted}}
+            <p>Siamo spiacenti di informarti che l'evento <strong>{{eventName}}</strong> è stato eliminato dalla piattaforma EventHub.</p>
+            <div class="event-details">
+                <p><strong>Nome Evento:</strong> {{eventName}}</p>
+                <p><strong>Data:</strong> {{eventDate}}</p>
+                <p><strong>Luogo:</strong> {{eventLocation}}</p>
+            </div>
+            <p>Per qualsiasi domanda, contatta il supporto.</p>
+            {{else}}
+            <p>Siamo lieti di informarti che l'evento <strong>{{eventName}}</strong> è stato approvato e ora è visibile a tutti gli utenti sulla piattaforma EventHub.</p>
+            <div class="event-details">
+                <p><strong>Nome Evento:</strong> {{eventName}}</p>
+                <p><strong>Data:</strong> {{eventDate}}</p>
+                <p><strong>Luogo:</strong> {{eventLocation}}</p>
+            </div>
+            <p>Puoi visualizzare tutti i dettagli dell'evento e condividerlo con i tuoi amici cliccando sul pulsante qui sotto:</p>
+            <div class="button-container">
+                <a href="{{eventLink}}" class="button">Visualizza Evento</a>
+            </div>
+            {{/if}}
+            <p>Grazie per aver utilizzato EventHub!</p>
+            <p>Cordiali saluti,</p>
+            <p>Il Team di EventHub</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} EventHub. Tutti i diritti riservati.</p>
+            <p>Se non desideri più ricevere queste email, puoi <a href="#" style="color: #aaaaaa;">annullare l'iscrizione</a>.</p>
+        </div>
+    </div>
+</body>
+</html>
