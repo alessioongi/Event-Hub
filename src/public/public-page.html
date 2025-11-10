@@ -387,8 +387,9 @@
                             <button class="${buttonClass}" data-event-id="${event.id}" ${isLoggedIn ? '' : 'disabled'}>
                                 ${buttonText}
                             </button>
+                            <a href="event-details.html?id=${event.id}" class="button">Vedi Dettagli</a>
                             <button class="button" onclick="handleChatEvent('${event.id}')">Chat</button>
-                            <button class="button" onclick="handleReportEvent('${event.id}')">Segnala</button>
+                            <button class="button btn-danger" onclick="handleReportEvent('${event.id}')">Segnala</button>
                         </div>
                     `;
                     eventsListDiv.appendChild(eventCard);

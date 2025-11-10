@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dettagli Evento</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/public-page.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0; /* Removed padding */
+            background-color: #f0f2f5;
+        }
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 20px auto; /* Centra il contenitore principale */
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 10px 20px; /* Added horizontal padding for content inside header */
+            border-bottom: 1px solid #e0e0e0;
+            background-color: #007bff; /* Changed to blue */
+            width: 100%;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: white; /* Changed to white */
+        }
+        .nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav a {
+            color: white; /* Changed to white */
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .nav a:hover {
+            background-color: #f5f5f5;
+            color: #007bff; /* Changed to blue on hover */
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background-color 0.2s;
+            background-color: #007bff; /* Changed to blue */
+            color: white; /* Changed to white */
+        }
+        .login-btn {
+            background-color: white; /* Changed to white */
+            color: #007bff; /* Changed to blue */
+            border: none;
+        }
+        .login-btn:hover {
+            background-color: white;
+            color: #0056b3;
+        }
+        .logout-btn {
+            background-color: red; /* Changed to red */
+            color: white; /* Changed to white */
+            border: none;
+        }
+        .logout-btn:hover {
+            background-color: #cc0000;
+        }
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            color: white; /* Changed to white */
+        }
+        .user-role {
+            font-size: 14px;
+            color: white; /* Changed to white */
+        }
+        .event-details-container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .event-details-container h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .event-details-container p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .event-details-container strong {
+            color: #555;
+        }
+        .event-details-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .event-details-container .pdf-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .event-details-container .pdf-link:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">EventHub</div>
+        <div class="nav">
+            <a href="/" id="homeLink">Home</a>
+            <a href="/public-page.html">Pagina Pubblica</a>
+            <a href="/create-event.html" id="createEventLink" style="display: none;">Crea Evento</a>
+            <a href="/my-created-events" id="myCreatedEventsLink" style="display: none;">I miei eventi creati</a>
+            <a href="/admin-page.html" id="adminLink" style="display: none;">Area Admin</a>
+        </div>
+        <div class="auth-buttons">
+            <div class="user-info">
+                <span>Benvenuto, <span id="userName"></span></span>
+                <span class="user-role">(<span id="userRole"></span>)</span>
+            </div>
+            <a href="/login.html" class="button login-btn" id="loginBtn">Accedi</a>
+            <button class="button logout-btn" id="logoutBtn" style="display: none;" onclick="handleLogout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="event-details-container">
+        <h1 id="eventTitle">Caricamento dettagli evento...</h1>
+        <img id="eventImage" src="" alt="Immagine Evento" style="display: none;">
+        <p><strong>Descrizione:</strong> <span id="eventDescription"></span></p>
+        <p><strong>Data:</strong> <span id="eventDate"></span></p>
+        <p><strong>Ora:</strong> <span id="eventTime"></span></p>
+        <p><strong>Luogo:</strong> <span id="eventLocation"></span></p>
+        <p><strong>Categoria:</strong> <span id="eventCategory"></span></p>
+        <p><strong>Posti disponibili:</strong> <span id="eventCapacity"></span></p>
+        <p id="eventPdfContainer" style="display: none;"><strong>Documento:</strong> <a id="eventPdfLink" href="#" target="_blank" class="pdf-link">Visualizza PDF</a></p>
+    </div>
+
+
+    <script>
+        let isAuthenticated = false;
+        let userRole = '';
+
+        // Funzione per aggiornare l'interfaccia in base allo stato di autenticazione
+        function updateUI(userData) {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.querySelector('.user-info');
+            const adminLink = document.getElementById('adminLink');
+            const adminCard = document.getElementById('adminCard');
+            const userName = document.getElementById('userName');
+            const userRoleSpan = document.getElementById('userRole');
+            const createEventLink = document.getElementById('createEventLink');
+            const myCreatedEventsLink = document.getElementById('myCreatedEventsLink');
+            const homeLink = document.getElementById('homeLink');
+
+            if (isAuthenticated) {
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                userInfo.style.display = 'flex';
+                userName.textContent = userData.name || userData.email;
+                userRoleSpan.textContent = userData.role;
+
+                homeLink.style.display = 'none';
+
+                if (userData.role === 'admin') {
+                    adminLink.style.display = 'block';
+                    // adminCard.style.display = 'block'; // Non c'è adminCard in questa pagina
+                }
+                createEventLink.style.display = 'block';
+                myCreatedEventsLink.style.display = 'block';
+            } else {
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                userInfo.style.display = 'none';
+                adminLink.style.display = 'none';
+                // adminCard.style.display = 'none'; // Non c'è adminCard in questa pagina
+                createEventLink.style.display = 'none';
+                myCreatedEventsLink.style.display = 'none';
+                homeLink.style.display = 'block';
+            }
+        }
+
+        // Funzione per verificare lo stato della sessione
+        async function checkSession() {
+            console.log('checkSession chiamata.');
+            try {
+                const response = await fetch('/api/check-session');
+                const data = await response.json();
+                
+                isAuthenticated = data.isAuthenticated;
+                if (isAuthenticated) {
+                    // Ottieni i dettagli dell'utente
+                    const userResponse = await fetch('/api/user');
+                    const userData = await userResponse.json();
+                    // console.log('Dati utente ricevuti:', userData);
+                    userRole = userData.role;
+                    updateUI(userData);
+                } else {
+                    updateUI({});
+                }
+            } catch (error) {
+                console.error('Errore nel controllo della sessione:', error);
+                updateUI({});
+            }
+        }
+
+        // Funzione per gestire il logout
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                console.log('Risposta logout:', response);
+
+                if (response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/'; // Re-enable redirection
+                } else {
+                    console.error('Errore durante il logout:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Errore durante il logout:', error);
+            }
+        }
+
+        // Controlla la sessione all'avvio
+        checkSession();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('id');
+
+            if (!eventId) {
+                document.getElementById('eventTitle').textContent = 'Errore: ID evento non fornito.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/events/${eventId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const event = await response.json();
+
+                document.getElementById('eventTitle').textContent = event.title;
+                if (event.image_url) {
+                    const eventImage = document.getElementById('eventImage');
+                    eventImage.src = event.image_url;
+                    eventImage.style.display = 'block';
+                }
+                document.getElementById('eventDescription').textContent = event.description;
+                document.getElementById('eventDate').textContent = new Date(event.event_date).toLocaleDateString();
+                document.getElementById('eventTime').textContent = event.event_time ? event.event_time.substring(0, 5) : '';
+                document.getElementById('eventLocation').textContent = event.location;
+                document.getElementById('eventCategory').textContent = event.category || 'N/A';
+                document.getElementById('eventCapacity').textContent = event.capacity;
+
+                if (event.pdf_url) {
+                    document.getElementById('eventPdfLink').href = event.pdf_url;
+                    document.getElementById('eventPdfContainer').style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Errore nel recupero dei dettagli dell\'evento:', error);
+                document.getElementById('eventTitle').textContent = 'Errore nel caricamento dei dettagli dell\'evento.';
+            }
+        });
+    </script>
+</body>
+</html>
