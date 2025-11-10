@@ -43,16 +43,16 @@ const createEvent = asyncHandler(async (req, res) => {
 
     if (adminEmails.length > 0) {
         const adminSubject = 'Nuovo Evento in Attesa di Approvazione';
-        const adminHtmlContent = `
-            <h1>Nuovo Evento Creato</h1>
-            <p>Un nuovo evento, <strong>${title}</strong>, è stato creato ed è in attesa della tua approvazione.</p>
-            <p>Descrizione: ${description}</p>
-            <p>Data: ${event_date} ${event_time}</p>
-            <p>Organizzatore: ${req.user.name || req.user.email}</p>
-            <p>Per approvare o rifiutare l'evento, visita la pagina di amministrazione.</p>
-            <a href="http://localhost:3000/admin-page.html">Vai alla pagina Admin</a>
-        `;
-        await sendEmail(adminEmails.join(','), adminSubject, adminHtmlContent);
+        const adminTemplateData = {
+            eventName: title,
+            eventDescription: description,
+            eventDate: event_date,
+            eventTime: event_time,
+            organizerName: req.user.name || req.user.email,
+            adminPanelLink: `${process.env.FRONTEND_URL}/admin-approve-events.html`,
+            year: new Date().getFullYear()
+        };
+        await sendEmail(adminEmails.join(','), adminSubject, 'adminNewEventNotification', adminTemplateData);
     }
 
     res.status(201).json({ message: 'Event created successfully', event: newEvent.rows[0] });
@@ -156,6 +156,7 @@ const rejectEvent = asyncHandler(async (req, res) => {
             isApproved: false,
             isRejected: true,
             isIgnored: false,
+            isReportRelated: false,
             year: new Date().getFullYear()
         };
         await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
@@ -174,6 +175,7 @@ const rejectEvent = asyncHandler(async (req, res) => {
                     isApproved: false,
                     isRejected: true,
                     isIgnored: false,
+                    isReportRelated: true,
                     year: new Date().getFullYear()
                 };
                 await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
@@ -416,16 +418,18 @@ const updateEvent = asyncHandler(async (req, res) => {
         const adminEmails = admins.rows.map(admin => admin.email);
         if (adminEmails.length > 0) {
             const adminSubject = 'Evento Modificato - Richiede Riapprovazione';
-            const adminHtmlContent = `
-                <h1>Evento Modificato</h1>
-                <p>L'evento <strong>${updatedEvent.title}</strong> è stato modificato ed è in attesa della tua riapprovazione.</p>
-                <p>Descrizione: ${updatedEvent.description}</p>
-                <p>Data: ${updatedEvent.event_date} ${updatedEvent.event_time}</p>
-                <p>Organizzatore: ${req.user.name || req.user.email}</p>
-                <p>Per approvare o rifiutare l'evento, visita la pagina di amministrazione.</p>
-                <a href="http://localhost:3000/admin-page.html">Vai alla pagina Admin</a>
-            `;
-            await sendEmail(adminEmails.join(','), adminSubject, adminHtmlContent);
+            const organizerDetails = await pool.query('SELECT name, email FROM users WHERE id = $1', [updatedEvent.organizer_id]);
+            const organizerName = organizerDetails.rows[0].name || organizerDetails.rows[0].email;
+            const templateData = {
+                eventName: updatedEvent.title,
+                eventDescription: updatedEvent.description,
+                eventDate: updatedEvent.event_date,
+                eventTime: updatedEvent.event_time,
+                organizerName: organizerName,
+                adminPanelLink: `${process.env.FRONTEND_URL}/admin-approve-events.html`,
+                year: new Date().getFullYear()
+            };
+            await sendEmail(adminEmails.join(','), adminSubject, 'adminEventModifiedNotification', templateData);
         }
 
         res.status(200).json({ message: 'Evento aggiornato con successo - in attesa di riapprovazione', event: updatedEvent });
@@ -619,7 +623,8 @@ const ignoreReport = asyncHandler(async (req, res) => {
                 isApproved: false,
                 isRejected: false,
                 isIgnored: true,
-                year: new Date().getFullYear()
+            isReportRelated: true,
+            year: new Date().getFullYear()
             };
             await sendEmail(organizerEmail, organizerSubject, 'reportDecisionEmail', organizerTemplateData);
         }
@@ -637,7 +642,8 @@ const ignoreReport = asyncHandler(async (req, res) => {
                 isApproved: false,
                 isRejected: false,
                 isIgnored: true,
-                year: new Date().getFullYear()
+                        isReportRelated: true,
+                        year: new Date().getFullYear()
             };
             await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
         }
@@ -681,6 +687,7 @@ const rejectReportedEvent = asyncHandler(async (req, res) => {
             isApproved: false,
             isRejected: true,
             isIgnored: false,
+            isReportRelated: true,
             year: new Date().getFullYear()
         };
         await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);

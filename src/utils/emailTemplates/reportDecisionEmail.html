@@ -52,7 +52,9 @@
         </div>
         <div class="content">
             <p>Ciao {{userName}},</p>
+            {{#if isReportRelated}}
             <p>Volevamo informarti riguardo alla segnalazione che hai inviato per l'evento <strong>{{eventName}}</strong>.</p>
+            {{/if}}
             {{#if isApproved}}
                 <p>Siamo lieti di comunicarti che l'evento <strong>{{eventName}}</strong> è stato approvato e sarà disponibile sulla piattaforma.</p>
                 <p>Grazie per aver contribuito a mantenere la nostra comunità sicura e piacevole.</p>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuovo Evento in Attesa di Approvazione</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.8em;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Nuovo Evento Creato</h2>
+        </div>
+        <div class="content">
+            <p>Ciao Admin,</p>
+            <p>Un nuovo evento, <strong>{{eventName}}</strong>, è stato creato ed è in attesa della tua approvazione.</p>
+            <p><strong>Dettagli Evento:</strong></p>
+            <ul>
+                <li><strong>Titolo:</strong> {{eventName}}</li>
+                <li><strong>Descrizione:</strong> {{eventDescription}}</li>
+                <li><strong>Data:</strong> {{eventDate}} {{eventTime}}</li>
+                <li><strong>Organizzatore:</strong> {{organizerName}}</li>
+            </ul>
+            <p>Per approvare o rifiutare l'evento, visita la pagina di amministrazione:</p>
+            <a href="{{adminPanelLink}}" class="button" style="color: white;">Vai alla pagina Admin</a>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} EventHub. Tutti i diritti riservati.</p>
+        </div>
+    </div>
+</body>
+</html>
