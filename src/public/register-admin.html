@@ -41,6 +41,25 @@
             box-sizing: border-box;
             font-size: 16px;
         }
+        .password-container {
+            position: relative;
+            width: 100%;
+        }
+        .password-container input[type="password"],
+        .password-container input[type="text"] {
+            padding-right: 40px; /* Make space for the toggle button */
+        }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #777;
+        }
+        .toggle-password:hover {
+            color: #333;
+        }
         input:focus {
             outline: none;
             border-color: #1a73e8;
@@ -119,7 +138,10 @@
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <div class="password-container">
+                    <input type="password" id="password" name="password" required>
+                    <span class="toggle-password" onclick="togglePasswordVisibility('password')">👁️</span>
+                </div>
             </div>
             <button type="submit">Registra Amministratore</button>
         </form>
@@ -192,6 +214,18 @@
             } catch (error) {
                 errorMessage.textContent = error.message;
                 errorMessage.style.display = 'block';
+            }
+        }
+
+        function togglePasswordVisibility(id) {
+            const input = document.getElementById(id);
+            const toggle = input.nextElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                toggle.textContent = '🔒'; // Change icon to locked eye
+            } else {
+                input.type = 'password';
+                toggle.textContent = '👁️'; // Change icon to open eye
             }
         }
     </script>

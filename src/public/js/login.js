@@ -34,3 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+function togglePasswordVisibility(id) {
+    const input = document.getElementById(id);
+    const toggle = input.nextElementSibling;
+    if (input.type === 'password') {
+        input.type = 'text';
+        toggle.textContent = '🔒'; // Change icon to locked eye
+    } else {
+        input.type = 'password';
+        toggle.textContent = '👁️'; // Change icon to open eye
+    }
+}
