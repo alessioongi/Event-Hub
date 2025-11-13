@@ -180,24 +180,26 @@ const rejectEvent = asyncHandler(async (req, res) => {
         };
         await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
 
-        // Invia notifica a tutti gli utenti per evento rifiutato
+        // Invia notifica a tutti gli utenti per evento rimosso a causa di segnalazione
         const allUserEmails = await getAllUserEmails();
-        const eventLink = `${process.env.FRONTEND_URL}/event-details.html?id=${rejectedEvent.id}`;
-        const notificationSubject = `Evento Rifiutato: ${rejectedEvent.title}`;
-        const notificationTemplateData = {
+        const eventLink = `${process.env.FRONTEND_URL}/public-page.html`; // Link alla pagina pubblica dove l'evento non sarà più visibile
+        const notificationSubjectAllUsers = `Evento Rimosso: ${rejectedEvent.title}`;
+        const notificationTemplateDataAllUsers = {
             eventName: rejectedEvent.title,
             eventLink: eventLink,
             eventDate: new Date(rejectedEvent.event_date).toLocaleDateString('it-IT'),
             eventLocation: rejectedEvent.location,
-            isRejected: true, // Flag per indicare che l'evento è stato rifiutato
+            isRejected: true, // Flag per indicare che l'evento è stato rimosso
+            isReportRelated: true, // Flag per indicare che la rimozione è dovuta a segnalazione
             year: new Date().getFullYear()
         };
 
         for (const userEmail of allUserEmails) {
-            await sendEmail(userEmail, notificationSubject, 'eventApprovedNotification', notificationTemplateData);
+            console.log(`Invio email di rimozione evento (a tutti gli utenti) a: ${userEmail}`);
+            await sendEmail(userEmail, notificationSubjectAllUsers, 'eventApprovedNotification', notificationTemplateDataAllUsers);
         }
 
-        // Verifica se ci sono segnalazioni per questo evento e notifica i segnalatori
+        // Recupera tutti i segnalatori per questo evento e invia loro un'email
         const reportsResult = await pool.query('SELECT user_id FROM event_reports WHERE event_id = $1', [id]);
         for (const report of reportsResult.rows) {
             const reporterEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [report.user_id]);
@@ -743,6 +745,25 @@ const rejectReportedEvent = asyncHandler(async (req, res) => {
             year: new Date().getFullYear()
         };
         await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+
+        // Invia notifica a tutti gli utenti per evento rimosso a causa di segnalazione
+        const allUserEmails = await getAllUserEmails();
+        const eventLink = `${process.env.FRONTEND_URL}/public-page.html`; // Link alla pagina pubblica dove l'evento non sarà più visibile
+        const notificationSubjectAllUsers = `Evento Rimosso: ${rejectedEvent.title}`;
+        const notificationTemplateDataAllUsers = {
+            eventName: rejectedEvent.title,
+            eventLink: eventLink,
+            eventDate: new Date(rejectedEvent.event_date).toLocaleDateString('it-IT'),
+            eventLocation: rejectedEvent.location,
+            isRejected: true, // Flag per indicare che l'evento è stato rimosso
+            isReportRelated: true, // Flag per indicare che la rimozione è dovuta a segnalazione
+            year: new Date().getFullYear()
+        };
+
+        for (const userEmail of allUserEmails) {
+            console.log(`Invio email di rimozione evento (a tutti gli utenti) a: ${userEmail}`);
+            await sendEmail(userEmail, notificationSubjectAllUsers, 'eventApprovedNotification', notificationTemplateDataAllUsers);
+        }
 
         // Recupera tutti i segnalatori per questo evento e invia loro un'email
         const reportersResult = await pool.query('SELECT DISTINCT user_id FROM event_reports WHERE event_id = $1', [event_id]);

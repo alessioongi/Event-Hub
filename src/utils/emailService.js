@@ -53,4 +53,16 @@ const sendEmail = async (to, subject, templateName, templateData) => {
     }
 };
 
-module.exports = { sendEmail };
+module.exports = { sendEmail, getAllUserEmails };
+
+    async function getAllUserEmails() {
+        try {
+            const result = await pool.query('SELECT email FROM users');
+            const emails = result.rows.map(row => row.email);
+            console.log('Email recuperate dal database:', emails);
+            return emails;
+        } catch (error) {
+            console.error('Errore nel recupero di tutti gli indirizzi email degli utenti:', error);
+            return [];
+        }
+    }
