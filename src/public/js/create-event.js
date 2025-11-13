@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     createEventForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        const submitButton = createEventForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true; // Disabilita il pulsante per prevenire doppi click
+
         const formData = new FormData();
         formData.append('title', document.getElementById('title').value);
         formData.append('description', document.getElementById('description').value);
@@ -59,6 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error creating event:', error);
             messageElement.textContent = 'An error occurred. Please try again.';
             messageElement.className = 'message error';
+        } finally {
+            submitButton.disabled = false; // Riabilita il pulsante
         }
     });
 });
