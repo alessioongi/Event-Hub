@@ -53,7 +53,7 @@ const createEvent = asyncHandler(async (req, res) => {
             adminPanelLink: `${process.env.FRONTEND_URL}/admin-approve-events.html`,
             year: new Date().getFullYear()
         };
-        await sendEmail(adminEmails.join(','), adminSubject, 'adminNewEventNotification', adminTemplateData);
+        await sendEmail(adminEmails.join(','), adminSubject, null, 'adminNewEventNotification', adminTemplateData);
     }
 
     res.status(201).json({ message: 'Event created successfully', event: newEvent.rows[0] });
@@ -101,7 +101,7 @@ const approveEvent = asyncHandler(async (req, res) => {
             eventLink: eventLink,
             year: new Date().getFullYear()
         };
-        await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+        await sendEmail(organizerEmail, subject, null, 'reportDecisionEmail', templateData);
 
         // Invia notifica a tutti gli utenti
         const allUserEmails = await getAllUserEmails();
@@ -115,7 +115,7 @@ const approveEvent = asyncHandler(async (req, res) => {
         };
 
         for (const userEmail of allUserEmails) {
-            await sendEmail(userEmail, notificationSubject, 'eventApprovedNotification', notificationTemplateData);
+            await sendEmail(userEmail, notificationSubject, null, 'eventApprovedNotification', notificationTemplateData);
         }
 
         // Verifica se ci sono segnalazioni per questo evento e notifica i segnalatori
@@ -134,7 +134,7 @@ const approveEvent = asyncHandler(async (req, res) => {
                     isIgnored: false,
                     year: new Date().getFullYear()
                 };
-                await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
+                await sendEmail(reporterEmail, reporterSubject, null, 'newReportEmail', reporterTemplateData);
             }
         }
 
@@ -178,7 +178,7 @@ const rejectEvent = asyncHandler(async (req, res) => {
             isReportRelated: false,
             year: new Date().getFullYear()
         };
-        await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+        await sendEmail(organizerEmail, subject, null, 'reportDecisionEmail', templateData);
 
         // Invia notifica a tutti gli utenti per evento rimosso a causa di segnalazione
         const allUserEmails = await getAllUserEmails();
@@ -196,7 +196,7 @@ const rejectEvent = asyncHandler(async (req, res) => {
 
         for (const userEmail of allUserEmails) {
             console.log(`Invio email di rimozione evento (a tutti gli utenti) a: ${userEmail}`);
-            await sendEmail(userEmail, notificationSubjectAllUsers, 'eventApprovedNotification', notificationTemplateDataAllUsers);
+            await sendEmail(userEmail, notificationSubjectAllUsers, null, 'eventApprovedNotification', notificationTemplateDataAllUsers);
         }
 
         // Recupera tutti i segnalatori per questo evento e invia loro un'email
@@ -216,7 +216,7 @@ const rejectEvent = asyncHandler(async (req, res) => {
                     isReportRelated: true,
                     year: new Date().getFullYear()
                 };
-                await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
+                await sendEmail(reporterEmail, reporterSubject, null, 'reportDecisionEmail', reporterTemplateData);
             }
         }
 
@@ -467,7 +467,7 @@ const updateEvent = asyncHandler(async (req, res) => {
                 adminPanelLink: `${process.env.FRONTEND_URL}/admin-approve-events.html`,
                 year: new Date().getFullYear()
             };
-            await sendEmail(adminEmails.join(','), adminSubject, 'adminEventModifiedNotification', templateData);
+            await sendEmail(adminEmails.join(','), adminSubject, null, 'adminEventModifiedNotification', templateData);
         }
 
         res.status(200).json({ message: 'Evento aggiornato con successo - in attesa di riapprovazione', event: updatedEvent });
@@ -517,7 +517,7 @@ const deleteEvent = asyncHandler(async (req, res) => {
                 year: new Date().getFullYear()
             };
             const subject = `Aggiornamento Evento: ${eventToDelete.title} è stato eliminato`;
-            await sendEmail(allUserEmails.join(','), subject, 'eventApprovedNotification', notificationTemplateData);
+            await sendEmail(allUserEmails.join(','), subject, null, 'eventApprovedNotification', notificationTemplateData);
         }
 
         res.status(200).json({ message: 'Evento eliminato con successo' });
@@ -591,7 +591,7 @@ const reportEvent = asyncHandler(async (req, res) => {
                 message: "È stata inviata una nuova segnalazione per l'evento."
             };
             for (const email of adminEmails) {
-                await sendEmail(email, adminSubject, 'newReportEmail', adminTemplateData);
+                await sendEmail(email, adminSubject, null, 'newReportEmail', adminTemplateData);
             }
         }
 
@@ -606,7 +606,7 @@ const reportEvent = asyncHandler(async (req, res) => {
                 isReporterThankYou: true,
                 message: "Abbiamo ricevuto la tua segnalazione e la esamineremo attentamente."
             };
-            await sendEmail(reporterEmail, reporterSubject, 'newReportEmail', reporterTemplateData);
+            await sendEmail(reporterEmail, reporterSubject, null, 'newReportEmail', reporterTemplateData);
         }
 
         // Invia email al creatore dell'evento (se diverso dal segnalatore)
@@ -620,7 +620,7 @@ const reportEvent = asyncHandler(async (req, res) => {
                 isCreatorNotification: true,
                 message: "Il tuo evento ha ricevuto una segnalazione."
             };
-            await sendEmail(eventCreatorEmail, creatorSubject, 'newReportEmail', creatorTemplateData);
+            await sendEmail(eventCreatorEmail, creatorSubject, null, 'newReportEmail', creatorTemplateData);
         }
 
         res.status(201).json({ message: 'Evento segnalato con successo.' });
@@ -680,7 +680,7 @@ const ignoreReport = asyncHandler(async (req, res) => {
             isReportRelated: true,
             year: new Date().getFullYear()
             };
-            await sendEmail(organizerEmail, organizerSubject, 'reportDecisionEmail', organizerTemplateData);
+            await sendEmail(organizerEmail, organizerSubject, null, 'reportDecisionEmail', organizerTemplateData);
         }
 
         // Invia email al segnalatore
@@ -699,7 +699,7 @@ const ignoreReport = asyncHandler(async (req, res) => {
                         isReportRelated: true,
                         year: new Date().getFullYear()
             };
-            await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
+            await sendEmail(reporterEmail, reporterSubject, null, 'reportDecisionEmail', reporterTemplateData);
         }
 
         res.status(200).json({ message: 'Segnalazione ignorata con successo' });
@@ -744,7 +744,7 @@ const rejectReportedEvent = asyncHandler(async (req, res) => {
             isReportRelated: true,
             year: new Date().getFullYear()
         };
-        await sendEmail(organizerEmail, subject, 'reportDecisionEmail', templateData);
+        await sendEmail(organizerEmail, subject, null, 'reportDecisionEmail', templateData);
 
         // Invia notifica a tutti gli utenti per evento rimosso a causa di segnalazione
         const allUserEmails = await getAllUserEmails();
@@ -762,7 +762,7 @@ const rejectReportedEvent = asyncHandler(async (req, res) => {
 
         for (const userEmail of allUserEmails) {
             console.log(`Invio email di rimozione evento (a tutti gli utenti) a: ${userEmail}`);
-            await sendEmail(userEmail, notificationSubjectAllUsers, 'eventApprovedNotification', notificationTemplateDataAllUsers);
+            await sendEmail(userEmail, notificationSubjectAllUsers, null, 'eventApprovedNotification', notificationTemplateDataAllUsers);
         }
 
         // Recupera tutti i segnalatori per questo evento e invia loro un'email
@@ -779,9 +779,10 @@ const rejectReportedEvent = asyncHandler(async (req, res) => {
                     isApproved: false,
                     isRejected: true,
                     isIgnored: false,
+                    isReportRelated: true,
                     year: new Date().getFullYear()
                 };
-                await sendEmail(reporterEmail, reporterSubject, 'reportDecisionEmail', reporterTemplateData);
+                await sendEmail(reporterEmail, reporterSubject, null, 'reportDecisionEmail', reporterTemplateData);
             }
         }
 
