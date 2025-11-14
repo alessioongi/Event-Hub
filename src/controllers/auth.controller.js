@@ -26,11 +26,19 @@ exports.register = async (req, res, next) => {
 
     const { name, email, password, role } = req.body;
 
-    // Verifica se l'utente esiste già
-    const existingUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (existingUser.rows.length > 0) {
+    // Verifica se l'utente esiste già tramite email
+    const existingUserByEmail = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existingUserByEmail.rows.length > 0) {
       return res.status(400).json({
         message: 'Un utente con questa email esiste già'
+      });
+    }
+
+    // Verifica se l'utente esiste già tramite nome
+    const existingUserByName = await db.query('SELECT * FROM users WHERE name = $1', [name]);
+    if (existingUserByName.rows.length > 0) {
+      return res.status(400).json({
+        message: 'Un utente con questo nome esiste già'
       });
     }
 

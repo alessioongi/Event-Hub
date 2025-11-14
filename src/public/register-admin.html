@@ -47,6 +47,7 @@
         }
         .password-container input[type="password"],
         .password-container input[type="text"] {
+            width: calc(100% - 40px); /* Adjusted width to account for toggle button */
             padding-right: 40px; /* Make space for the toggle button */
         }
         .toggle-password {
@@ -142,6 +143,7 @@
                     <input type="password" id="password" name="password" required>
                     <span class="toggle-password" onclick="togglePasswordVisibility('password')">👁️</span>
                 </div>
+                <small>La password deve essere lunga almeno 6 caratteri.</small>
             </div>
             <button type="submit">Registra Amministratore</button>
         </form>
@@ -200,7 +202,11 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Errore durante la registrazione');
+                    if (data.message) {
+                        throw new Error(data.message);
+                    } else {
+                        throw new Error(data.error || 'Errore durante la registrazione');
+                    }
                 }
 
                 successMessage.textContent = 'Amministratore registrato con successo!';
